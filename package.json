@@ -8,7 +8,7 @@
     "dev": "cross-env NODE_ENV=development nodemon -w src src/server.ts | pino-pretty -t \"yyyy-mm-dd HH:MM:ss.l\" -i pid,hostname",
     "build": "rimraf dist && tsc",
     "migrate:create": "db-migrate create",
-    "migrate:run": "db-migrate up",
+    "migrate": "db-migrate up && db-migrate up -e test",
     "test": "cross-env NODE_ENV=test jasmine-ts",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
