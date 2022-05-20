@@ -1,4 +1,8 @@
 {
+  "ignorePatterns": [
+    "migrations/**/*",
+    "dist/**/*"
+  ],
   "env": {
     "browser": true,
     "es2021": true,
@@ -20,12 +24,17 @@
     "@typescript-eslint"
   ],
   "rules": {
+    "no-shadow": "off",
     "no-continue": "off",
     "no-await-in-loop": "off",
     "no-param-reassign": "off",
     "import/extensions": "off",
     "import/no-unresolved": "off",
     "no-restricted-syntax": "off",
-    "import/prefer-default-export": "off"
+    "class-methods-use-this": "off",
+    "import/prefer-default-export": "off",
+    "@typescript-eslint/no-shadow": [
+      "error"
+    ]
   }
 }
