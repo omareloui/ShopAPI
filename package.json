@@ -25,7 +25,8 @@
     "helmet": "^5.1.0",
     "morgan": "^1.10.0",
     "pg": "^8.5.1",
-    "pino": "^7.11.0"
+    "pino": "^7.11.0",
+    "yup": "^0.32.11"
   },
   "devDependencies": {
     "@faker-js/faker": "^6.3.1",
