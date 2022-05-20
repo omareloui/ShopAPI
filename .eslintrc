@@ -33,6 +33,7 @@
     "no-restricted-syntax": "off",
     "class-methods-use-this": "off",
     "import/prefer-default-export": "off",
+    "@typescript-eslint/no-empty-function": "warn",
     "@typescript-eslint/no-shadow": [
       "error"
     ]
