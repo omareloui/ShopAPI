@@ -1,61 +1,78 @@
 import bcrypt from "bcrypt";
 
-import dbClient from "../database";
-import { log } from "../utils";
+import { buildUpdateQuery, query } from "../utils";
 
-type DTO = Record<string, unknown>;
-
-export interface User {
-  id: number;
-  firstname: string;
-  lastname: string;
-  password: string;
-}
-
-export type CreateUser = Omit<User, "id">;
+import type {
+  DTO,
+  User,
+  CreateUser,
+  UpdateUser,
+  DeleteResponse,
+} from "../@types";
 
 export class UserModel {
-  index() {}
-
-  show() {}
-
-  update() {}
-
-  async create(dto: DTO | CreateUser): Promise<User> {
-    try {
-      log.trace("Connecting to the db");
-      const conn = await dbClient.connect();
-
-      log.trace("Removing extra props and validation");
-      this.removeExtraProps(dto);
-      this.validateCreationSchema(dto);
-      this.validateCreationValues(dto);
-
-      log.trace("Hashing the password");
-      dto.password = await bcrypt.hash(
-        `${dto.password}.${process.env.PASSWORD_PEPPER}`,
-        parseInt(process.env.SALT_ROUNDS || "14", 10)
-      );
-
-      log.trace("Querying the db");
-      const result = await conn.query(
-        "INSERT INTO users (firstName, lastName, password) VALUES ($1, $2, $3) RETURNING *",
-        [dto.firstname, dto.lastname, dto.password]
-      );
-
-      const user = result.rows[0] as User;
-      log.trace({ user }, "Created user");
-
-      conn.release();
-      return user;
-    } catch (err) {
-      const e = err as Error;
-      log.trace(e.message);
-      throw new Error(e.message);
-    }
+  async index(): Promise<User[]> {
+    const result = await query("SELECT * FROM USERS");
+    const users = result.rows;
+    return users;
   }
 
-  delete() {}
+  async show(userId: string | number | undefined): Promise<User> {
+    this.validateId(userId);
+    const result = await query("SELECT * FROM users WHERE id = $1", [userId]);
+    const user = result.rows[0];
+    return user;
+  }
+
+  async create(dto: CreateUser | DTO): Promise<User> {
+    this.removeExtraProps(dto);
+    this.validateCreationSchema(dto);
+    this.validateCreationValues(dto);
+
+    dto.password = await this.hashPassword(dto.password);
+
+    const result = await query(
+      "INSERT INTO users (firstName, lastName, password) VALUES ($1, $2, $3) RETURNING *",
+      [dto.firstname, dto.lastname, dto.password]
+    );
+
+    const user = result.rows[0] as User;
+
+    return user;
+  }
+
+  async update(
+    userId: string | number | undefined,
+    dto: UpdateUser | DTO
+  ): Promise<User> {
+    this.validateId(userId);
+    this.removeExtraProps(dto);
+
+    this.validateUpdateValues(dto);
+
+    if ("password" in dto)
+      dto.password = await this.hashPassword(dto.password as string);
+
+    const { query: q, fields } = buildUpdateQuery(dto, userId);
+
+    const result = await query(q, fields);
+    const user = result.rows[0];
+
+    return user;
+  }
+
+  async delete(userId: string | number | undefined): Promise<DeleteResponse> {
+    this.validateId(userId);
+    const result = await query("DELETE FROM users WHERE id = $1", [userId]);
+    return { ok: result.rowCount === 1 };
+  }
+
+  private hashPassword(plainPassword: string) {
+    return bcrypt.hash(
+      `${plainPassword}.${process.env.PASSWORD_PEPPER}`,
+      parseInt(process.env.SALT_ROUNDS || "14", 10)
+    );
+  }
 
   private removeExtraProps(dto: DTO) {
     Object.keys(dto).forEach(k => {
@@ -82,11 +99,34 @@ export class UserModel {
     lastname,
     password,
   }: CreateUser) {
-    if (password.length < 8)
+    this.validatePassword(password);
+    [firstname, lastname].forEach(n => this.validateName(n));
+  }
+
+  private validateUpdateValues(dto: UpdateUser) {
+    if ("password" in dto) this.validatePassword(dto.password!);
+    if ("firstname" in dto) this.validateName(dto.firstname!);
+    if ("lastname" in dto) this.validateName(dto.lastname!);
+  }
+
+  private validatePassword(value: string) {
+    if (value.length < 8)
       throw new Error("Password can't be less than 8 characters.");
-    if (firstname.length < 3)
-      throw new Error("First name can't be less than 3 characters.");
-    if (lastname.length < 3)
-      throw new Error("Last name can't be less than 3 characters.");
+  }
+
+  private validateName(value: string) {
+    if (value.length < 3)
+      throw new Error("Names can't be less than 3 characters.");
+  }
+
+  private validateId(
+    userId: string | number | undefined
+  ): asserts userId is string | number {
+    const throwError: () => never = () => {
+      throw new Error("You have to provide a valid user id.");
+    };
+    if (!userId) throwError();
+    const parsedId = parseInt(userId.toString(), 10);
+    if (!parsedId) throwError();
   }
 }
