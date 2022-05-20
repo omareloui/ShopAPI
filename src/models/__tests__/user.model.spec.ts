@@ -10,6 +10,12 @@ const userModel = new UserModel();
 const BCRYPT_PASS_REGEX = /^\$2b\$.{56}$/i;
 
 describe("User Model", () => {
+  const generateRandomUser = () => ({
+    firstname: faker.name.firstName(),
+    lastname: faker.name.lastName(),
+    password: faker.random.words(3),
+  });
+
   afterAll(async () => {
     await query("DELETE FROM users *");
   });
@@ -31,22 +37,13 @@ describe("User Model", () => {
     });
 
     it("should create a user successfully on providing all valid data", async () => {
-      const user: CreateUser = {
-        firstname: faker.name.firstName(),
-        lastname: faker.name.lastName(),
-        password: faker.random.words(3),
-      };
+      const user: CreateUser = generateRandomUser();
       const createUser = await userModel.create(user);
-
       expect(createUser).toBeTruthy();
     });
 
     it("should get the user after creating it", async () => {
-      const user: CreateUser = {
-        firstname: faker.name.firstName(),
-        lastname: faker.name.lastName(),
-        password: faker.random.words(3),
-      };
+      const user: CreateUser = generateRandomUser();
       const createdUser = await userModel.create(user);
       expect(createdUser).toEqual({
         id: createdUser.id,
@@ -56,40 +53,23 @@ describe("User Model", () => {
     });
 
     it("should make sure the password is at least 8 characters", async () => {
-      const user: CreateUser = {
-        firstname: faker.name.firstName(),
-        lastname: faker.name.lastName(),
-        password: "123",
-      };
+      const user: CreateUser = { ...generateRandomUser(), password: "123" };
       const message = await getError(() => userModel.create(user));
-      expect(message).toMatch("less than 8 characters");
+      expect(message).toMatch("least 8 characters");
     });
 
     it("should make sure the first and last names is at least 3 characters", async () => {
-      const user1: CreateUser = {
-        firstname: faker.name.firstName(),
-        lastname: "h",
-        password: faker.random.words(3),
-      };
-      const message1 = await getError(() => userModel.create(user1));
+      const user1: CreateUser = { ...generateRandomUser(), lastname: "h" };
+      const msg1 = await getError(() => userModel.create(user1));
 
-      const user2: CreateUser = {
-        firstname: "hi",
-        lastname: faker.name.firstName(),
-        password: faker.random.words(3),
-      };
-      const message2 = await getError(() => userModel.create(user2));
+      const user2: CreateUser = { ...generateRandomUser(), firstname: "hi" };
+      const msg2 = await getError(() => userModel.create(user2));
 
-      expect(message1).toMatch(/names can't be/i);
-      expect(message2).toMatch(/names can't be/i);
+      [msg1, msg2].forEach(m => expect(m).toMatch("least 3 characters"));
     });
 
     it("should hash the password", async () => {
-      const user: CreateUser = {
-        firstname: faker.name.firstName(),
-        lastname: faker.name.lastName(),
-        password: faker.random.words(3),
-      };
+      const user: CreateUser = generateRandomUser();
       const createdUser = await userModel.create(user);
       expect(createdUser.password).toMatch(BCRYPT_PASS_REGEX);
     });
@@ -98,11 +78,7 @@ describe("User Model", () => {
   describe("Read one", () => {
     let user: User;
     beforeAll(async () => {
-      user = await userModel.create({
-        firstname: faker.name.firstName(),
-        lastname: faker.name.lastName(),
-        password: faker.random.words(3),
-      });
+      user = await userModel.create(generateRandomUser());
     });
 
     it("should have a show method", () => {
@@ -115,22 +91,22 @@ describe("User Model", () => {
     });
 
     it("should throw an error on not providing an id", async () => {
-      const msg1 = await getError(() => userModel.show(""));
-      const msg2 = await getError(() => userModel.show("some_test"));
-      expect(msg1).toEqual("You have to provide a valid user id.");
-      expect(msg2).toEqual("You have to provide a valid user id.");
+      const msg1 = await getError(() =>
+        userModel.show("" as unknown as number)
+      );
+      const msg2 = await getError(() =>
+        userModel.show("some_test" as unknown as number)
+      );
+
+      [msg1, msg2].forEach(m => expect(m).toMatch("id must be a `number`"));
     });
   });
 
   describe("Update", () => {
     let user: User;
 
-    beforeAll(async () => {
-      user = await userModel.create({
-        firstname: faker.name.firstName(),
-        lastname: faker.name.lastName(),
-        password: faker.random.words(3),
-      });
+    beforeEach(async () => {
+      user = await userModel.create(generateRandomUser());
     });
 
     it("should have an update method", () => {
@@ -165,6 +141,12 @@ describe("User Model", () => {
       expect(result.password).toMatch(BCRYPT_PASS_REGEX);
     });
 
+    it("should update only the provided fields", async () => {
+      const result = await userModel.update(user.id, { firstname: "new_name" });
+      expect(result.firstname).toEqual("new_name");
+      expect(result.lastname).toEqual(user.lastname);
+    });
+
     it("should not use any extra invalid provided data", async () => {
       const result = await userModel.update(user.id, {
         firstname: "new firstname",
@@ -176,10 +158,13 @@ describe("User Model", () => {
     });
 
     it("should throw error on invalid id", async () => {
-      const msg1 = await getError(() => userModel.show(""));
-      const msg2 = await getError(() => userModel.show("some_test"));
-      expect(msg1).toEqual("You have to provide a valid user id.");
-      expect(msg2).toEqual("You have to provide a valid user id.");
+      const msg1 = await getError(() =>
+        userModel.show("" as unknown as number)
+      );
+      const msg2 = await getError(() =>
+        userModel.show("some_test" as unknown as number)
+      );
+      [msg1, msg2].forEach(m => expect(m).toMatch("id must be a `number`"));
     });
 
     it("should throw error on providing invalid values", async () => {
@@ -190,8 +175,9 @@ describe("User Model", () => {
         userModel.update(user.id, { password: "" })
       );
 
-      expect(msg1).toMatch("Names can't be less than 3 characters.");
-      expect(msg2).toMatch("Password can't be less than 8 characters.");
+      [msg1, msg2].forEach(m =>
+        expect(m).toMatch(/must be at least \d characters/)
+      );
     });
   });
 
@@ -199,11 +185,7 @@ describe("User Model", () => {
     let user: User;
 
     beforeEach(async () => {
-      user = await userModel.create({
-        firstname: faker.name.firstName(),
-        lastname: faker.name.lastName(),
-        password: faker.random.words(3),
-      });
+      user = await userModel.create(generateRandomUser());
     });
 
     afterEach(async () => {
@@ -220,10 +202,13 @@ describe("User Model", () => {
     });
 
     it("should throw an error on not providing an id", async () => {
-      const msg1 = await getError(() => userModel.show(""));
-      const msg2 = await getError(() => userModel.show("some_test"));
-      expect(msg1).toEqual("You have to provide a valid user id.");
-      expect(msg2).toEqual("You have to provide a valid user id.");
+      const msg1 = await getError(() =>
+        userModel.show("" as unknown as number)
+      );
+      const msg2 = await getError(() =>
+        userModel.show("some_test" as unknown as number)
+      );
+      [msg1, msg2].forEach(m => expect(m).toMatch("id must be a `number`"));
     });
   });
 });

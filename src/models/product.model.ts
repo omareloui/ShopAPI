@@ -44,15 +44,17 @@ export class ProductModel {
     productId: UnconfirmedID,
     dto: UpdateProduct | DTO
   ): Promise<Product> {
-    const { id, name, category, price } = await updateProductSchema.validate({
+    const vData = await updateProductSchema.validate({
       id: productId,
       ...dto,
     });
 
+    delete (vData as { id?: number }).id;
+
     const { query: q, fields } = buildUpdateQuery(
       "products",
-      { name, category, price },
-      id
+      vData,
+      productId!
     );
 
     const result = await query(q, fields);
