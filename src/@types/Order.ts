@@ -10,7 +10,20 @@ export interface Order {
   quantity: number;
   state: OrderState;
 }
+export interface PopulatedOrder {
+  id: number;
+
+  product: string;
+  product_price: number;
+  product_category: string;
+
+  u_firstname: string;
+  u_lastname: string;
+
+  quantity: number;
+  state: OrderState;
+}
 
 export type CreateOrder = Omit<Order, "id">;
 
-export type UpdateOrder = Partial<Order>;
+export type UpdateOrder = Partial<CreateOrder>;

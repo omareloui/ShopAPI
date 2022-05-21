@@ -8,7 +8,11 @@ export function buildUpdateQuery(
 
   let q = `UPDATE ${tableName} SET`;
 
-  for (const [key, value] of Object.entries(fields)) {
+  const fieldsEntries = Object.entries(fields);
+
+  if (!fieldsEntries.length) throw new Error("No fields provided to update.");
+
+  for (const [key, value] of fieldsEntries) {
     if (current > 2) q += ",";
 
     q += ` ${key} = $${current}`;
