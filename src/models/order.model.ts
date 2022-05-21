@@ -19,7 +19,7 @@ import type {
 
 export class OrderModel {
   async index(): Promise<PopulatedOrder[]> {
-    const result = await query(
+    const result = await query<PopulatedOrder>(
       `
         SELECT
           orders.id,
@@ -40,7 +40,7 @@ export class OrderModel {
 
   async show(orderId: UnconfirmedID): Promise<PopulatedOrder> {
     const { id } = await showOrderSchema.validate({ id: orderId });
-    const result = await query(
+    const result = await query<PopulatedOrder>(
       `
         SELECT
           orders.id,
@@ -79,7 +79,7 @@ export class OrderModel {
     const vData = await updateOrderSchema.validate({ ...dto, id: orderId });
     delete (vData as { id?: number }).id;
     const { query: q, fields } = buildUpdateQuery("orders", vData, orderId!);
-    const result = await query(q, fields);
+    const result = await query<Order>(q, fields);
     const order = await this.show(result.rows[0].id);
     return order;
   }

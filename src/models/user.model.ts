@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 
-import { buildUpdateQuery, log, query } from "../utils";
+import { buildUpdateQuery, query } from "../utils";
 
 import {
   showUserSchema,
@@ -20,13 +20,13 @@ import type {
 
 export class UserModel {
   async index(): Promise<User[]> {
-    const result = await query("SELECT * FROM USERS");
+    const result = await query<User>("SELECT * FROM USERS");
     return result.rows;
   }
 
   async show(userId: UnconfirmedID): Promise<User> {
     const { id } = await showUserSchema.validate({ id: userId });
-    const result = await query("SELECT * FROM users WHERE id = $1", [id]);
+    const result = await query<User>("SELECT * FROM users WHERE id = $1", [id]);
     return result.rows[0];
   }
 
@@ -36,7 +36,7 @@ export class UserModel {
     );
     const hashedPassword = await this.hashPassword(password);
 
-    const result = await query(
+    const result = await query<User>(
       "INSERT INTO users (firstName, lastName, password) VALUES ($1, $2, $3) RETURNING *",
       [firstname, lastname, hashedPassword]
     );
@@ -54,7 +54,7 @@ export class UserModel {
 
     const { query: q, fields } = buildUpdateQuery("users", vData, userId!);
 
-    const result = await query(q, fields);
+    const result = await query<User>(q, fields);
     const user = result.rows[0];
 
     return user;
@@ -62,7 +62,7 @@ export class UserModel {
 
   async delete(userId: UnconfirmedID): Promise<DeleteResponse> {
     const { id } = await deleteUserSchema.validate({ id: userId });
-    const result = await query("DELETE FROM users WHERE id = $1", [id]);
+    const result = await query<User>("DELETE FROM users WHERE id = $1", [id]);
     return { ok: result.rowCount === 1 };
   }
 

@@ -18,21 +18,23 @@ import type {
 
 export class ProductModel {
   async index(): Promise<Product[]> {
-    const result = await query("SELECT * FROM products");
+    const result = await query<Product>("SELECT * FROM products");
     return result.rows;
   }
 
   async show(productId: UnconfirmedID): Promise<Product> {
     const { id } = await showProductSchema.validate({ id: productId });
-    const result = await query("SELECT * FROM products WHERE id = $1", [id]);
-    const product = result.rows[0];
-    return product;
+    const result = await query<Product>(
+      "SELECT * FROM products WHERE id = $1",
+      [id]
+    );
+    return result.rows[0];
   }
 
   async create(dto: CreateProduct | DTO): Promise<Product> {
     const vData = await createProductSchema.validate(dto);
 
-    const result = await query(
+    const result = await query<Product>(
       "INSERT INTO products (name, price, category) VALUES ($1, $2, $3) RETURNING *",
       [vData.name, vData.price, vData.category]
     );
@@ -57,7 +59,7 @@ export class ProductModel {
       productId!
     );
 
-    const result = await query(q, fields);
+    const result = await query<Product>(q, fields);
     const product = result.rows[0];
 
     return product;
