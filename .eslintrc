@@ -25,6 +25,7 @@
   ],
   "rules": {
     "no-shadow": "off",
+    "camelcase": "off",
     "no-continue": "off",
     "no-await-in-loop": "off",
     "no-param-reassign": "off",
