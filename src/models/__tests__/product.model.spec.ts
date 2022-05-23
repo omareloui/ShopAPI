@@ -1,19 +1,13 @@
-import { faker } from "@faker-js/faker";
 
 import { ProductModel } from "..";
 import { getError, query } from "../../utils";
 
-import type { CreateProduct, Product } from "../../@types";
+import type { Product } from "../../@types";
+import { generate } from "../../__tests__/utils";
 
 const productModel = new ProductModel();
 
 describe("Product Model", () => {
-  const generateRandomProduct = (): CreateProduct => ({
-    name: faker.random.words(3),
-    price: parseInt(faker.random.numeric(3), 10),
-    category: faker.random.word(),
-  });
-
   afterAll(async () => {
     await query("DELETE FROM products *");
   });
@@ -35,13 +29,13 @@ describe("Product Model", () => {
     });
 
     it("should create a product successfully on providing all valid data", async () => {
-      const product = generateRandomProduct();
+      const product = generate.product();
       const createProduct = await productModel.create(product);
       expect(createProduct).toBeTruthy();
     });
 
     it("should get the product after creating it", async () => {
-      const product = generateRandomProduct();
+      const product = generate.product();
       const createdProduct = await productModel.create(product);
       expect(createdProduct).toEqual({
         id: createdProduct.id,
@@ -52,14 +46,14 @@ describe("Product Model", () => {
     it("should make sure the name and category are at least 3 characters", async () => {
       const message1 = await getError(() =>
         productModel.create({
-          ...generateRandomProduct(),
+          ...generate.product(),
           name: "hi",
         })
       );
 
       const message2 = await getError(() =>
         productModel.create({
-          ...generateRandomProduct(),
+          ...generate.product(),
           category: "hi",
         })
       );
@@ -72,7 +66,7 @@ describe("Product Model", () => {
   describe("Read one", () => {
     let product: Product;
     beforeAll(async () => {
-      product = await productModel.create(generateRandomProduct());
+      product = await productModel.create(generate.product());
     });
 
     it("should have a show method", () => {
@@ -101,7 +95,7 @@ describe("Product Model", () => {
     let product: Product;
 
     beforeEach(async () => {
-      product = await productModel.create(generateRandomProduct());
+      product = await productModel.create(generate.product());
     });
 
     it("should have an update method", () => {
@@ -181,7 +175,7 @@ describe("Product Model", () => {
     let product: Product;
 
     beforeEach(async () => {
-      product = await productModel.create(generateRandomProduct());
+      product = await productModel.create(generate.product());
     });
 
     afterEach(async () => {

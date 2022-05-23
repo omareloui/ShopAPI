@@ -1,7 +1,7 @@
-import { faker } from "@faker-js/faker";
-
 import { UserModel } from "..";
 import { getError, query } from "../../utils";
+
+import { generate } from "../../__tests__/utils";
 
 import type { User, CreateUser } from "../../@types";
 
@@ -10,12 +10,6 @@ const userModel = new UserModel();
 const BCRYPT_PASS_REGEX = /^\$2b\$.{56}$/i;
 
 describe("User Model", () => {
-  const generateRandomUser = () => ({
-    firstname: faker.name.firstName(),
-    lastname: faker.name.lastName(),
-    password: faker.random.words(3),
-  });
-
   afterAll(async () => {
     await query("DELETE FROM users *");
   });
@@ -37,13 +31,13 @@ describe("User Model", () => {
     });
 
     it("should create a user successfully on providing all valid data", async () => {
-      const user: CreateUser = generateRandomUser();
+      const user: CreateUser = generate.user();
       const createUser = await userModel.create(user);
       expect(createUser).toBeTruthy();
     });
 
     it("should get the user after creating it", async () => {
-      const user: CreateUser = generateRandomUser();
+      const user: CreateUser = generate.user();
       const createdUser = await userModel.create(user);
       expect(createdUser).toEqual({
         id: createdUser.id,
@@ -53,23 +47,23 @@ describe("User Model", () => {
     });
 
     it("should make sure the password is at least 8 characters", async () => {
-      const user: CreateUser = { ...generateRandomUser(), password: "123" };
+      const user: CreateUser = { ...generate.user(), password: "123" };
       const message = await getError(() => userModel.create(user));
       expect(message).toMatch("least 8 characters");
     });
 
     it("should make sure the first and last names is at least 3 characters", async () => {
-      const user1: CreateUser = { ...generateRandomUser(), lastname: "h" };
+      const user1: CreateUser = { ...generate.user(), lastname: "h" };
       const msg1 = await getError(() => userModel.create(user1));
 
-      const user2: CreateUser = { ...generateRandomUser(), firstname: "hi" };
+      const user2: CreateUser = { ...generate.user(), firstname: "hi" };
       const msg2 = await getError(() => userModel.create(user2));
 
       [msg1, msg2].forEach(m => expect(m).toMatch("least 3 characters"));
     });
 
     it("should hash the password", async () => {
-      const user: CreateUser = generateRandomUser();
+      const user: CreateUser = generate.user();
       const createdUser = await userModel.create(user);
       expect(createdUser.password).toMatch(BCRYPT_PASS_REGEX);
     });
@@ -78,7 +72,7 @@ describe("User Model", () => {
   describe("Read one", () => {
     let user: User;
     beforeAll(async () => {
-      user = await userModel.create(generateRandomUser());
+      user = await userModel.create(generate.user());
     });
 
     it("should have a show method", () => {
@@ -106,7 +100,7 @@ describe("User Model", () => {
     let user: User;
 
     beforeEach(async () => {
-      user = await userModel.create(generateRandomUser());
+      user = await userModel.create(generate.user());
     });
 
     it("should have an update method", () => {
@@ -185,7 +179,7 @@ describe("User Model", () => {
     let user: User;
 
     beforeEach(async () => {
-      user = await userModel.create(generateRandomUser());
+      user = await userModel.create(generate.user());
     });
 
     afterEach(async () => {

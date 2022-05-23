@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler, RequestHandler } from "express";
 
 import { log } from ".";
+import config from "../config";
 
 export const notFoundHandler: RequestHandler = (req, _res, next) => {
   next({
@@ -14,7 +15,8 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   const code = err.statusCode || 500;
   const msg = err.message || "Something went wrong!";
 
-  log[code >= 500 ? "fatal" : "error"](msg);
+  if (!config.isTest)
+    log[code >= 500 ? "fatal" : "error"](`ERROR HANDLER: ${msg}`);
 
   return res.status(code).send(msg);
 };

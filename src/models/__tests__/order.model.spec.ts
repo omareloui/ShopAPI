@@ -1,18 +1,9 @@
-import { faker } from "@faker-js/faker";
-
 import { UserModel, ProductModel, OrderModel } from "..";
 
 import { query, getError } from "../../utils";
+import { generate } from "../../__tests__/utils";
 
-import {
-  CreateOrder,
-  CreateProduct,
-  CreateUser,
-  OrderState,
-  PopulatedOrder,
-  Product,
-  User,
-} from "../../@types";
+import { CreateOrder, OrderState, PopulatedOrder, Product, User } from "../../@types";
 
 const userModel = new UserModel();
 const productModel = new ProductModel();
@@ -22,26 +13,7 @@ describe("Order Model", () => {
   let user: User;
   let product: Product;
 
-  const generate = {
-    user: (): CreateUser => ({
-      firstname: faker.name.firstName(),
-      lastname: faker.name.lastName(),
-      password: faker.random.words(3),
-    }),
-
-    product: (): CreateProduct => ({
-      name: faker.random.words(3),
-      price: parseInt(faker.random.numeric(3), 10),
-      category: faker.random.word(),
-    }),
-
-    order: (): CreateOrder => ({
-      u_id: user.id,
-      product_id: product.id,
-      quantity: parseInt(faker.random.numeric(), 10),
-      state: OrderState.ACTIVE,
-    }),
-  };
+  const generateOrder = (): CreateOrder => generate.order(user.id, product.id)
 
   beforeAll(async () => {
     user = await userModel.create(generate.user());
@@ -69,7 +41,7 @@ describe("Order Model", () => {
     });
 
     it("should join the user and product tables", async () => {
-      await orderModel.create(generate.order());
+      await orderModel.create(generateOrder());
 
       const orders = await orderModel.index();
       const o = orders[0];
@@ -93,12 +65,12 @@ describe("Order Model", () => {
     });
 
     it("should create a order successfully on providing all valid data", async () => {
-      const createOrder = await orderModel.create(generate.order());
+      const createOrder = await orderModel.create(generateOrder());
       expect(createOrder).toBeTruthy();
     });
 
     it("should get the order after creating it", async () => {
-      const order = generate.order();
+      const order = generateOrder();
       const createdOrder = await orderModel.create(order);
       expect(createdOrder).toEqual({
         id: createdOrder.id,
@@ -114,11 +86,11 @@ describe("Order Model", () => {
 
     it("should make sure the product and user ids are valid", async () => {
       const msg1 = await getError(() =>
-        orderModel.create({ ...generate.order(), product_id: "some_id" })
+        orderModel.create({ ...generateOrder(), product_id: "some_id" })
       );
 
       const msg2 = await getError(() =>
-        orderModel.create({ ...generate.order(), u_id: "" })
+        orderModel.create({ ...generateOrder(), u_id: "" })
       );
 
       [msg1, msg2].forEach(m => expect(m).toMatch("must be a `number` type"));
@@ -126,7 +98,7 @@ describe("Order Model", () => {
 
     it("should default to 1 quantity if not provided", async () => {
       const result = await orderModel.create({
-        ...generate.order(),
+        ...generateOrder(),
         quantity: undefined,
       });
       expect(result.quantity).toEqual(1);
@@ -134,20 +106,20 @@ describe("Order Model", () => {
 
     it("should accept only positive numbers greater than 1 for quantity", async () => {
       const msg = await getError(() =>
-        orderModel.create({ ...generate.order(), quantity: -2 })
+        orderModel.create({ ...generateOrder(), quantity: -2 })
       );
       expect(msg).toMatch("must be greater than or equal to 1");
     });
 
     it("should only accept 'active' or 'complete' for status", async () => {
       const msg1 = await getError(() =>
-        orderModel.create({ ...generate.order(), state: OrderState.ACTIVE })
+        orderModel.create({ ...generateOrder(), state: OrderState.ACTIVE })
       );
       const msg2 = await getError(() =>
-        orderModel.create({ ...generate.order(), state: OrderState.COMPLETE })
+        orderModel.create({ ...generateOrder(), state: OrderState.COMPLETE })
       );
       const msg3 = await getError(() =>
-        orderModel.create({ ...generate.order(), state: "invalid_state" })
+        orderModel.create({ ...generateOrder(), state: "invalid_state" })
       );
 
       [msg1, msg2].forEach(m => expect(m).toBeFalsy());
@@ -158,20 +130,20 @@ describe("Order Model", () => {
 
     it("should throw an error on providing id for user that doesn't exist", async () => {
       const msg = await getError(() =>
-        orderModel.create({ ...generate.order, u_id: 5155 })
+        orderModel.create({ ...generateOrder, u_id: 5155 })
       );
       expect(msg).toBeTruthy();
     });
 
     it("should throw an error on providing id for product that doesn't exist", async () => {
       const msg = await getError(() =>
-        orderModel.create({ ...generate.order, product_id: 5155 })
+        orderModel.create({ ...generateOrder, product_id: 5155 })
       );
       expect(msg).toBeTruthy();
     });
 
     it("should populate the product and user", async () => {
-      const order = await orderModel.create(generate.order());
+      const order = await orderModel.create(generateOrder());
       expect(order.id).toBeDefined();
       expect(order.product).toBeDefined();
       expect(order.product_category).toBeDefined();
@@ -187,7 +159,7 @@ describe("Order Model", () => {
     let order: PopulatedOrder;
 
     beforeAll(async () => {
-      order = await orderModel.create(generate.order());
+      order = await orderModel.create(generateOrder());
     });
 
     it("should have a show method", () => {
@@ -227,7 +199,7 @@ describe("Order Model", () => {
     let order: PopulatedOrder;
 
     beforeEach(async () => {
-      order = await orderModel.create(generate.order());
+      order = await orderModel.create(generateOrder());
     });
 
     it("should have an update method", () => {
@@ -335,7 +307,7 @@ describe("Order Model", () => {
     let order: PopulatedOrder;
 
     beforeEach(async () => {
-      order = await orderModel.create(generate.order());
+      order = await orderModel.create(generateOrder());
     });
 
     afterEach(async () => {

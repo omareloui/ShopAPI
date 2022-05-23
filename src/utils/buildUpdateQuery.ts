@@ -1,3 +1,5 @@
+import { APIError } from "../lib";
+
 export function buildUpdateQuery(
   tableName: string,
   fields: Record<string, unknown>,
@@ -10,7 +12,8 @@ export function buildUpdateQuery(
 
   const fieldsEntries = Object.entries(fields);
 
-  if (!fieldsEntries.length) throw new Error("No fields provided to update.");
+  if (!fieldsEntries.length)
+    throw new APIError("No fields provided to update.", 401);
 
   for (const [key, value] of fieldsEntries) {
     if (current > 2) q += ",";
