@@ -1,4 +1,3 @@
-
 import { ProductModel } from "..";
 import { getError, query } from "../../utils";
 
