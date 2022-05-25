@@ -32,11 +32,11 @@ const destroy: RequestHandler = async (req, res) => {
 };
 
 const router = generateRouter([
-  [HTTPMethods.GET, "/users", index],
-  [HTTPMethods.GET, "/users/:id", show],
-  [HTTPMethods.POST, "/users", create],
-  [HTTPMethods.PUT, "/users/:id", update],
-  [HTTPMethods.DELETE, "/users/:id", destroy],
+  [HTTPMethods.GET, "/users", index, true],
+  [HTTPMethods.GET, "/users/:id", show, true],
+  [HTTPMethods.POST, "/users", create, true],
+  [HTTPMethods.PUT, "/users/:id", update, true],
+  [HTTPMethods.DELETE, "/users/:id", destroy, true],
 ]);
 
 export { router as usersRoutes };

@@ -8,4 +8,11 @@ export enum HTTPMethods {
   DELETE = "delete",
 }
 
-export type RoutesArray = [HTTPMethods, string, RequestHandler][];
+export type RequireAuthentication = boolean;
+
+export type RoutesArray = [
+  HTTPMethods,
+  string,
+  RequestHandler,
+  RequireAuthentication?
+][];

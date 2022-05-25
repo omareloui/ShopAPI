@@ -34,7 +34,7 @@ const destroy: RequestHandler = async (req, res) => {
 const router = generateRouter([
   [HTTPMethods.GET, "/products", index],
   [HTTPMethods.GET, "/products/:id", show],
-  [HTTPMethods.POST, "/products", create],
+  [HTTPMethods.POST, "/products", create, true],
   [HTTPMethods.PUT, "/products/:id", update],
   [HTTPMethods.DELETE, "/products/:id", destroy],
 ]);

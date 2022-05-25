@@ -1,16 +1,26 @@
 import supertest from "supertest";
 import { UpdateProduct, Product } from "../../@types";
+import { AuthModel } from "../../models";
 import { app } from "../../server";
 import { query } from "../../utils";
 
 import { generate } from "../../__tests__/utils";
 
+const authModel = new AuthModel();
 const request = supertest(app);
 
 describe("Product Handler", () => {
   describe("Existing end-points", () => {
+    let token: string;
+
+    beforeAll(async () => {
+      const auth = await authModel.signup(generate.signup());
+      token = `Bearer ${auth.token.body}`;
+    });
+
     afterAll(async () => {
       await query("DELETE FROM products *");
+      await query("DELETE FROM users *");
     });
 
     it("should have GET /products", async () => {
@@ -19,13 +29,17 @@ describe("Product Handler", () => {
     });
 
     it("should have POST /products", async () => {
-      const res = await request.post("/products").send(generate.product());
+      const res = await request
+        .post("/products")
+        .set({ Authorization: token })
+        .send(generate.product());
       expect(res.statusCode).not.toEqual(404);
     });
 
     it("should have GET /products/:id", async () => {
       const createRes = await request
         .post("/products")
+        .set({ Authorization: token })
         .send(generate.product());
       const { id } = createRes.body as Product;
       const res = await request.get(`/products/${id}`);
@@ -35,6 +49,7 @@ describe("Product Handler", () => {
     it("should have DELETE /products/:id", async () => {
       const createRes = await request
         .post("/products")
+        .set({ Authorization: token })
         .send(generate.product());
       const { id } = createRes.body as Product;
       const res = await request.delete(`/products/${id}`);
@@ -44,6 +59,7 @@ describe("Product Handler", () => {
     it("should have PUT /products/:id", async () => {
       const createRes = await request
         .post("/products")
+        .set({ Authorization: token })
         .send(generate.product());
       const { id } = createRes.body as Product;
       const res = await request.put(`/products/${id}`);
@@ -51,9 +67,26 @@ describe("Product Handler", () => {
     });
   });
 
+  describe("Require authentication", () => {
+    it("should POST /products require to be authenticated", async () => {
+      const res = await request.post("/products");
+      expect(res.error).toBeTruthy();
+      expect(res.error && res.error.text).toMatch("You have to signin");
+      expect(res.statusCode).toEqual(401);
+    });
+  });
+
   describe("Basic functionality", () => {
+    let token: string;
+
+    beforeAll(async () => {
+      const auth = await authModel.signup(generate.signup());
+      token = `Bearer ${auth.token.body}`;
+    });
+
     afterAll(async () => {
       await query("DELETE FROM products *");
+      await query("DELETE FROM users *");
     });
 
     it("should get the products on GET /products", async () => {
@@ -61,9 +94,12 @@ describe("Product Handler", () => {
       expect(res.body).toEqual([]);
     });
 
-    it("should create a product on POST /products", async () => {
+    it("should create a product on POST /products on providing the token", async () => {
       const product = generate.product();
-      const res = await request.post("/products").send(product);
+      const res = await request
+        .post("/products")
+        .send(product)
+        .set({ Authorization: token });
       const resProduct = res.body as Product;
       expect(resProduct.category).toEqual(product.category);
       expect(resProduct.name).toEqual(product.name);
@@ -74,6 +110,7 @@ describe("Product Handler", () => {
       const product = generate.product();
       const { body: createdProduct } = await request
         .post("/products")
+        .set({ Authorization: token })
         .send(product);
       const { body: resProduct } = await request.get(
         `/products/${createdProduct.id}`
@@ -87,6 +124,7 @@ describe("Product Handler", () => {
       const product = generate.product();
       const { body: createdProduct } = await request
         .post("/products")
+        .set({ Authorization: token })
         .send(product);
       const { body: resProduct } = await request
         .put(`/products/${createdProduct.id}`)
@@ -98,6 +136,7 @@ describe("Product Handler", () => {
       const product = generate.product();
       const { body: createdProduct } = await request
         .post("/products")
+        .set({ Authorization: token })
         .send(product);
       const { body } = await request.delete(`/products/${createdProduct.id}`);
       expect(body.ok).toBeTrue();
