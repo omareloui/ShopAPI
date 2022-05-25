@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 const env = process.env.NODE_ENV;
 
 const isTest = env === "test";
@@ -11,4 +13,6 @@ export default {
   isProd: env === "production",
   isDev: env === "development",
   isTest,
+  jwtSecret: process.env.JWT_SECRET as string,
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN as string,
 };

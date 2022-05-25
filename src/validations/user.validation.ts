@@ -19,6 +19,11 @@ export const showUserSchema = yup
   .shape({ id: id.required() })
   .noUnknown();
 
+export const showUserWithUsernameSchema = yup
+  .object()
+  .shape({ username: username.required() })
+  .noUnknown();
+
 export const createUserSchema = yup
   .object()
   .shape({

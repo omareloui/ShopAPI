@@ -5,6 +5,7 @@ import {
   CreateProduct,
   CreateUser,
   OrderState,
+  Signup,
 } from "../../@types";
 
 function generateWMinChar<T extends string>(func: () => T, min = 3): T {
@@ -25,6 +26,10 @@ const generate = {
     password: generateWMinChar(() => faker.random.words(3), 8),
     ...override,
   }),
+
+  signup(override: Partial<Signup> = {}): Signup {
+    return { ...this.user(), ...override };
+  },
 
   product: (override: Partial<CreateProduct> = {}): CreateProduct => ({
     name: generateWMinChar(() => faker.random.words(3)),

@@ -1,13 +1,12 @@
-import bcrypt from "bcrypt";
-
 import { buildUpdateQuery, query } from "../utils";
-import { APIError } from "../lib";
+import { APIError, PasswordHelper } from "../lib";
 
 import {
   showUserSchema,
   createUserSchema,
   updateUserSchema,
   deleteUserSchema,
+  showUserWithUsernameSchema,
 } from "../validations";
 
 import type {
@@ -33,13 +32,27 @@ export class UserModel {
     return user;
   }
 
+  async showWithUsername(username: string): Promise<User> {
+    const { username: uname } = await showUserWithUsernameSchema.validate({
+      username,
+    });
+    const result = await query<User>(
+      "SELECT * FROM users WHERE LOWER(username) = LOWER($1)",
+      [uname]
+    );
+    const user = result.rows[0];
+    if (!user) throw new Error("Can't find the requested user.");
+
+    return user;
+  }
+
   async create(dto: CreateUser | DTO): Promise<User> {
     const { firstname, lastname, username, password } =
       await createUserSchema.validate(dto);
 
     await this.checkForDuplicate(username);
 
-    const hashedPassword = await this.hashPassword(password);
+    const hashedPassword = await PasswordHelper.hashPassword(password);
 
     const result = await query<User>(
       "INSERT INTO users (firstname, lastname, username, password) VALUES ($1, $2, $3, $4) RETURNING *",
@@ -57,7 +70,7 @@ export class UserModel {
     if (vData.username) await this.checkForDuplicate(vData.username);
 
     if (vData.password)
-      vData.password = await this.hashPassword(vData.password);
+      vData.password = await PasswordHelper.hashPassword(vData.password);
 
     const { query: q, fields } = buildUpdateQuery("users", vData, userId!);
 
@@ -71,13 +84,6 @@ export class UserModel {
     const { id } = await deleteUserSchema.validate({ id: userId });
     const result = await query<User>("DELETE FROM users WHERE id = $1", [id]);
     return { ok: result.rowCount === 1 };
-  }
-
-  private hashPassword(plainPassword: string) {
-    return bcrypt.hash(
-      `${plainPassword}.${process.env.PASSWORD_PEPPER}`,
-      parseInt(process.env.SALT_ROUNDS || "14", 10)
-    );
   }
 
   private async checkForDuplicate(username: string) {
