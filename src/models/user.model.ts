@@ -45,14 +45,16 @@ export class UserModel {
 
   async create(dto: CreateUser | DTO): Promise<User> {
     try {
-      const { firstname, lastname, password } = await createUserSchema.validate(
-        dto
-      );
+      const { firstname, lastname, username, password } =
+        await createUserSchema.validate(dto);
+
+      await this.checkForDuplicate(username);
+
       const hashedPassword = await this.hashPassword(password);
 
       const result = await query<User>(
-        "INSERT INTO users (firstName, lastName, password) VALUES ($1, $2, $3) RETURNING *",
-        [firstname, lastname, hashedPassword]
+        "INSERT INTO users (firstname, lastname, username, password) VALUES ($1, $2, $3, $4) RETURNING *",
+        [firstname, lastname, username, hashedPassword]
       );
 
       return result.rows[0];
@@ -66,6 +68,8 @@ export class UserModel {
       const vData = await updateUserSchema.validate({ ...dto, id: userId });
 
       delete (vData as { id?: number }).id;
+
+      if (vData.username) await this.checkForDuplicate(vData.username);
 
       if (vData.password)
         vData.password = await this.hashPassword(vData.password);
@@ -96,5 +100,14 @@ export class UserModel {
       `${plainPassword}.${process.env.PASSWORD_PEPPER}`,
       parseInt(process.env.SALT_ROUNDS || "14", 10)
     );
+  }
+
+  private async checkForDuplicate(username: string) {
+    const duplicatedUserResult = await query<User>(
+      "SELECT id FROM users WHERE LOWER(username) = LOWER($1)",
+      [username]
+    );
+    if (duplicatedUserResult.rows[0])
+      throw new APIError("The username already in use. Try another one.", 409);
   }
 }

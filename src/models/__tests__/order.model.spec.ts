@@ -3,7 +3,13 @@ import { UserModel, ProductModel, OrderModel } from "..";
 import { query, getError } from "../../utils";
 import { generate } from "../../__tests__/utils";
 
-import { CreateOrder, OrderState, PopulatedOrder, Product, User } from "../../@types";
+import {
+  CreateOrder,
+  OrderState,
+  PopulatedOrder,
+  Product,
+  User,
+} from "../../@types";
 
 const userModel = new UserModel();
 const productModel = new ProductModel();
@@ -13,7 +19,7 @@ describe("Order Model", () => {
   let user: User;
   let product: Product;
 
-  const generateOrder = (): CreateOrder => generate.order(user.id, product.id)
+  const generateOrder = (): CreateOrder => generate.order(user.id, product.id);
 
   beforeAll(async () => {
     user = await userModel.create(generate.user());
@@ -54,6 +60,7 @@ describe("Order Model", () => {
       expect(o.state).toBeDefined();
       expect(o.u_firstname).toBeDefined();
       expect(o.u_lastname).toBeDefined();
+      expect(o.u_username).toBeDefined();
 
       await query("DELETE FROM orders *");
     });
@@ -81,6 +88,7 @@ describe("Order Model", () => {
         state: order.state,
         u_firstname: user.firstname,
         u_lastname: user.lastname,
+        u_username: user.username,
       });
     });
 
@@ -152,6 +160,7 @@ describe("Order Model", () => {
       expect(order.state).toBeDefined();
       expect(order.u_firstname).toBeDefined();
       expect(order.u_lastname).toBeDefined();
+      expect(order.u_username).toBeDefined();
     });
   });
 
@@ -192,6 +201,7 @@ describe("Order Model", () => {
       expect(o.state).toBeDefined();
       expect(o.u_firstname).toBeDefined();
       expect(o.u_lastname).toBeDefined();
+      expect(o.u_username).toBeDefined();
     });
   });
 
@@ -300,6 +310,7 @@ describe("Order Model", () => {
       expect(o.state).toBeDefined();
       expect(o.u_firstname).toBeDefined();
       expect(o.u_lastname).toBeDefined();
+      expect(o.u_username).toBeDefined();
     });
   });
 

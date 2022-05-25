@@ -62,10 +62,26 @@ describe("User Model", () => {
       [msg1, msg2].forEach(m => expect(m).toMatch("least 3 characters"));
     });
 
+    it("should accept username as letter, numbers, or underscores only", async () => {
+      const user = generate.user({ username: "some name" });
+      const msg = await getError(() => userModel.create(user));
+      expect(msg).toMatch(
+        "You can only enter letters, numbers or underscores."
+      );
+    });
+
     it("should hash the password", async () => {
-      const user: CreateUser = generate.user();
+      const user = generate.user();
       const createdUser = await userModel.create(user);
       expect(createdUser.password).toMatch(BCRYPT_PASS_REGEX);
+    });
+
+    it("should not create a user with the same username", async () => {
+      const user1 = generate.user({ username: "to_duplicated" });
+      const user2 = generate.user({ username: "to_duplicated" });
+      await userModel.create(user1);
+      const msg = await getError(() => userModel.create(user2));
+      expect(msg).toMatch("The username already in use. Try another one.");
     });
   });
 
@@ -100,6 +116,7 @@ describe("User Model", () => {
     let user: User;
 
     beforeEach(async () => {
+      await query("DELETE FROM users *");
       user = await userModel.create(generate.user());
     });
 
@@ -119,13 +136,24 @@ describe("User Model", () => {
       expect(result.lastname).toBeDefined();
     });
 
-    it("should update the firstname and lastname fields to 'new_firstname' and 'new_lastname'", async () => {
+    it("should update the firstname, lastname, and username fields to 'new_firstname', 'new_lastname', and 'new_username'", async () => {
       const result = await userModel.update(user.id, {
         firstname: "new_firstname",
         lastname: "new_lastname",
+        username: "new_username",
       });
       expect(result.firstname).toBe("new_firstname");
       expect(result.lastname).toBe("new_lastname");
+      expect(result.username).toBe("new_username");
+    });
+
+    it("should accept username as letter, numbers, or underscores only", async () => {
+      const msg = await getError(() =>
+        userModel.update(user.id, { username: "test username" })
+      );
+      expect(msg).toMatch(
+        "You can only enter letters, numbers or underscores."
+      );
     });
 
     it("should hash the password if it was included", async () => {
@@ -135,10 +163,19 @@ describe("User Model", () => {
       expect(result.password).toMatch(BCRYPT_PASS_REGEX);
     });
 
+    it("should not update the username if it already exists", async () => {
+      await userModel.create(generate.user({ username: "to_dup_for_u" }));
+      const msg = await getError(() =>
+        userModel.update(user.id, { username: "to_dup_for_u" })
+      );
+      expect(msg).toMatch("The username already in use. Try another one.");
+    });
+
     it("should update only the provided fields", async () => {
-      const result = await userModel.update(user.id, { firstname: "new_name" });
-      expect(result.firstname).toEqual("new_name");
+      const result = await userModel.update(user.id, { firstname: "new name" });
+      expect(result.firstname).toEqual("new name");
       expect(result.lastname).toEqual(user.lastname);
+      expect(result.username).toEqual(user.username);
     });
 
     it("should not use any extra invalid provided data", async () => {

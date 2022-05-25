@@ -19,6 +19,7 @@ export interface PopulatedOrder {
 
   u_firstname: string;
   u_lastname: string;
+  u_username: string;
 
   quantity: number;
   state: OrderState;

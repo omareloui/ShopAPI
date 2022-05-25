@@ -31,7 +31,8 @@ export class OrderModel {
           products.category AS product_category,
           products.price AS product_price,
           users.firstname AS u_firstname,
-          users.lastname AS u_lastname
+          users.lastname AS u_lastname,
+          users.username AS u_username
         FROM orders
         JOIN products ON orders.product_id=products.id
         JOIN users ON orders.u_id=users.id
@@ -56,7 +57,8 @@ export class OrderModel {
           products.category AS product_category,
           products.price AS product_price,
           users.firstname AS u_firstname,
-          users.lastname AS u_lastname
+          users.lastname AS u_lastname,
+          users.username AS u_username
         FROM orders
         JOIN products ON orders.product_id = products.id
         JOIN users ON orders.u_id = users.id
