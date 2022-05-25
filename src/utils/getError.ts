@@ -1,3 +1,5 @@
+import { APIError } from "../lib";
+
 export async function getError<T extends () => unknown>(
   cb: T
 ): Promise<string | undefined> {
@@ -5,7 +7,7 @@ export async function getError<T extends () => unknown>(
   try {
     await cb();
   } catch (err) {
-    const e = err as Error;
+    const e = err as APIError | Error;
     msg = e.message;
   }
   return msg;

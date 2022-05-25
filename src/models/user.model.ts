@@ -21,78 +21,56 @@ import type {
 
 export class UserModel {
   async index(): Promise<User[]> {
-    try {
-      const result = await query<User>("SELECT * FROM USERS");
-      return result.rows;
-    } catch (e) {
-      throw new APIError(e);
-    }
+    const result = await query<User>("SELECT * FROM USERS");
+    return result.rows;
   }
 
   async show(userId: UnconfirmedID): Promise<User> {
-    try {
-      const { id } = await showUserSchema.validate({ id: userId });
-      const result = await query<User>("SELECT * FROM users WHERE id = $1", [
-        id,
-      ]);
-      const user = result.rows[0];
-      if (!user) throw new Error("Can't find the requested user.");
-      return user;
-    } catch (e) {
-      throw new APIError(e);
-    }
+    const { id } = await showUserSchema.validate({ id: userId });
+    const result = await query<User>("SELECT * FROM users WHERE id = $1", [id]);
+    const user = result.rows[0];
+    if (!user) throw new Error("Can't find the requested user.");
+    return user;
   }
 
   async create(dto: CreateUser | DTO): Promise<User> {
-    try {
-      const { firstname, lastname, username, password } =
-        await createUserSchema.validate(dto);
+    const { firstname, lastname, username, password } =
+      await createUserSchema.validate(dto);
 
-      await this.checkForDuplicate(username);
+    await this.checkForDuplicate(username);
 
-      const hashedPassword = await this.hashPassword(password);
+    const hashedPassword = await this.hashPassword(password);
 
-      const result = await query<User>(
-        "INSERT INTO users (firstname, lastname, username, password) VALUES ($1, $2, $3, $4) RETURNING *",
-        [firstname, lastname, username, hashedPassword]
-      );
+    const result = await query<User>(
+      "INSERT INTO users (firstname, lastname, username, password) VALUES ($1, $2, $3, $4) RETURNING *",
+      [firstname, lastname, username, hashedPassword]
+    );
 
-      return result.rows[0];
-    } catch (e) {
-      throw new APIError(e);
-    }
+    return result.rows[0];
   }
 
   async update(userId: UnconfirmedID, dto: UpdateUser | DTO): Promise<User> {
-    try {
-      const vData = await updateUserSchema.validate({ ...dto, id: userId });
+    const vData = await updateUserSchema.validate({ ...dto, id: userId });
 
-      delete (vData as { id?: number }).id;
+    delete (vData as { id?: number }).id;
 
-      if (vData.username) await this.checkForDuplicate(vData.username);
+    if (vData.username) await this.checkForDuplicate(vData.username);
 
-      if (vData.password)
-        vData.password = await this.hashPassword(vData.password);
+    if (vData.password)
+      vData.password = await this.hashPassword(vData.password);
 
-      const { query: q, fields } = buildUpdateQuery("users", vData, userId!);
+    const { query: q, fields } = buildUpdateQuery("users", vData, userId!);
 
-      const result = await query<User>(q, fields);
-      const user = result.rows[0];
+    const result = await query<User>(q, fields);
+    const user = result.rows[0];
 
-      return user;
-    } catch (e) {
-      throw new APIError(e);
-    }
+    return user;
   }
 
   async delete(userId: UnconfirmedID): Promise<DeleteResponse> {
-    try {
-      const { id } = await deleteUserSchema.validate({ id: userId });
-      const result = await query<User>("DELETE FROM users WHERE id = $1", [id]);
-      return { ok: result.rowCount === 1 };
-    } catch (e) {
-      throw new APIError(e);
-    }
+    const { id } = await deleteUserSchema.validate({ id: userId });
+    const result = await query<User>("DELETE FROM users WHERE id = $1", [id]);
+    return { ok: result.rowCount === 1 };
   }
 
   private hashPassword(plainPassword: string) {

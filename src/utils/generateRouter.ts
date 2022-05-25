@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import type { RoutesArray } from "../@types";
+import { APIError } from "../lib";
 
 export function generateRouter(routes: RoutesArray) {
   const router = Router();
@@ -10,7 +11,7 @@ export function generateRouter(routes: RoutesArray) {
       try {
         await func(req, res, next);
       } catch (e) {
-        next(e);
+        next(new APIError(e));
       }
     });
   });

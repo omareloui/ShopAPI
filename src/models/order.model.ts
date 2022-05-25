@@ -16,13 +16,11 @@ import type {
   UpdateOrder,
   PopulatedOrder,
 } from "../@types";
-import { APIError } from "../lib";
 
 export class OrderModel {
   async index(): Promise<PopulatedOrder[]> {
-    try {
-      const result = await query<PopulatedOrder>(
-        `
+    const result = await query<PopulatedOrder>(
+      `
         SELECT
           orders.id,
           orders.quantity,
@@ -37,18 +35,14 @@ export class OrderModel {
         JOIN products ON orders.product_id=products.id
         JOIN users ON orders.u_id=users.id
       `
-      );
-      return result.rows;
-    } catch (e) {
-      throw new APIError(e);
-    }
+    );
+    return result.rows;
   }
 
   async show(orderId: UnconfirmedID): Promise<PopulatedOrder> {
-    try {
-      const { id } = await showOrderSchema.validate({ id: orderId });
-      const result = await query<PopulatedOrder>(
-        `
+    const { id } = await showOrderSchema.validate({ id: orderId });
+    const result = await query<PopulatedOrder>(
+      `
         SELECT
           orders.id,
           orders.quantity,
@@ -64,52 +58,37 @@ export class OrderModel {
         JOIN users ON orders.u_id = users.id
         WHERE orders.id = $1
       `,
-        [id]
-      );
-      return result.rows[0];
-    } catch (e) {
-      throw new APIError(e);
-    }
+      [id]
+    );
+    return result.rows[0];
   }
 
   async create(dto: DTO | CreateOrder): Promise<PopulatedOrder> {
-    try {
-      const { u_id, product_id, quantity, state } =
-        await createOrderSchema.validate(dto);
-      const result = await query<Order>(
-        "INSERT INTO orders (u_id, product_id, quantity, state) VALUES ($1, $2, $3,$4) RETURNING *",
-        [u_id, product_id, quantity, state]
-      );
-      const order = await this.show(result.rows[0].id);
-      return order;
-    } catch (e) {
-      throw new APIError(e);
-    }
+    const { u_id, product_id, quantity, state } =
+      await createOrderSchema.validate(dto);
+    const result = await query<Order>(
+      "INSERT INTO orders (u_id, product_id, quantity, state) VALUES ($1, $2, $3,$4) RETURNING *",
+      [u_id, product_id, quantity, state]
+    );
+    const order = await this.show(result.rows[0].id);
+    return order;
   }
 
   async update(
     orderId: UnconfirmedID,
     dto: UpdateOrder | DTO
   ): Promise<PopulatedOrder> {
-    try {
-      const vData = await updateOrderSchema.validate({ ...dto, id: orderId });
-      delete (vData as { id?: number }).id;
-      const { query: q, fields } = buildUpdateQuery("orders", vData, orderId!);
-      const result = await query<Order>(q, fields);
-      const order = await this.show(result.rows[0].id);
-      return order;
-    } catch (e) {
-      throw new APIError(e);
-    }
+    const vData = await updateOrderSchema.validate({ ...dto, id: orderId });
+    delete (vData as { id?: number }).id;
+    const { query: q, fields } = buildUpdateQuery("orders", vData, orderId!);
+    const result = await query<Order>(q, fields);
+    const order = await this.show(result.rows[0].id);
+    return order;
   }
 
   async delete(orderId: UnconfirmedID): Promise<DeleteResponse> {
-    try {
-      const { id } = await deleteOrderSchema.validate({ id: orderId });
-      const result = await query("DELETE FROM orders WHERE id = $1", [id]);
-      return { ok: result.rowCount === 1 };
-    } catch (e) {
-      throw new APIError(e);
-    }
+    const { id } = await deleteOrderSchema.validate({ id: orderId });
+    const result = await query("DELETE FROM orders WHERE id = $1", [id]);
+    return { ok: result.rowCount === 1 };
   }
 }
