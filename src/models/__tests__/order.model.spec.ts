@@ -187,8 +187,7 @@ describe("Order Model", () => {
       const msg2 = await getError(() =>
         orderModel.show("some_test" as unknown as number)
       );
-      expect(msg1).toMatch("id is a required field");
-      expect(msg2).toMatch("invalid input syntax for type integer");
+      [msg1, msg2].forEach(m => expect(m).toMatch("id must be a `number`"));
     });
 
     it("should join the user and product tables", async () => {
@@ -202,6 +201,84 @@ describe("Order Model", () => {
       expect(o.u_firstname).toBeDefined();
       expect(o.u_lastname).toBeDefined();
       expect(o.u_username).toBeDefined();
+    });
+  });
+
+  describe("Read by user id", () => {
+    it("should have showByUser", () => {
+      expect(orderModel.showByUser).toBeDefined();
+    });
+
+    it("should get the required user orders only", async () => {
+      const user1 = await userModel.create(generate.user());
+      const user2 = await userModel.create(generate.user());
+      const user3 = await userModel.create(generate.user());
+
+      const order1 = await orderModel.create(
+        generate.order(user1.id, product.id)
+      );
+      const order2 = await orderModel.create(
+        generate.order(user1.id, product.id)
+      );
+      const order3 = await orderModel.create(
+        generate.order(user2.id, product.id)
+      );
+      const order4 = await orderModel.create(
+        generate.order(user3.id, product.id)
+      );
+      const order5 = await orderModel.create(
+        generate.order(user2.id, product.id)
+      );
+
+      const user1Orders = await orderModel.showByUser(user1.id);
+      const user2Orders = await orderModel.showByUser(user2.id);
+      const user3Orders = await orderModel.showByUser(user3.id);
+
+      expect(user1Orders.length).toEqual(2);
+      expect(user2Orders.length).toEqual(2);
+      expect(user3Orders.length).toEqual(1);
+
+      expect(user1Orders).toEqual([order2, order1]);
+      expect(user2Orders).toEqual([order5, order3]);
+      expect(user3Orders).toEqual([order4]);
+    });
+  });
+
+  describe("Read complete by user id", () => {
+    it("should have showByUser", () => {
+      expect(orderModel.showCompleteByUser).toBeDefined();
+    });
+
+    it("should get the required user orders only", async () => {
+      const user1 = await userModel.create(generate.user());
+      const user2 = await userModel.create(generate.user());
+      const user3 = await userModel.create(generate.user());
+      await orderModel.create(
+        generate.order(user1.id, product.id, { state: OrderState.ACTIVE })
+      );
+      const order2 = await orderModel.create(
+        generate.order(user1.id, product.id, { state: OrderState.COMPLETE })
+      );
+      const order3 = await orderModel.create(
+        generate.order(user2.id, product.id, { state: OrderState.COMPLETE })
+      );
+      await orderModel.create(
+        generate.order(user3.id, product.id, { state: OrderState.ACTIVE })
+      );
+      await orderModel.create(
+        generate.order(user2.id, product.id, { state: OrderState.ACTIVE })
+      );
+
+      const user1CompleteOrders = await orderModel.showCompleteByUser(user1.id);
+      const user2CompleteOrders = await orderModel.showCompleteByUser(user2.id);
+      const user3CompleteOrders = await orderModel.showCompleteByUser(user3.id);
+
+      expect(user1CompleteOrders.length).toEqual(1);
+      expect(user2CompleteOrders.length).toEqual(1);
+      expect(user3CompleteOrders.length).toEqual(0);
+      expect(user1CompleteOrders).toEqual([order2]);
+      expect(user2CompleteOrders).toEqual([order3]);
+      expect(user3CompleteOrders).toEqual([]);
     });
   });
 
@@ -271,8 +348,7 @@ describe("Order Model", () => {
       const msg2 = await getError(() =>
         orderModel.show("some_test" as unknown as number)
       );
-      expect(msg1).toMatch("id is a required field");
-      expect(msg2).toMatch("invalid input syntax for type integer");
+      [msg1, msg2].forEach(m => expect(m).toMatch("id must be a `number`"));
     });
 
     it("should throw error on providing invalid values", async () => {
@@ -341,8 +417,9 @@ describe("Order Model", () => {
       const msg2 = await getError(() =>
         orderModel.show("some_test" as unknown as number)
       );
-      expect(msg1).toMatch("id is a required field");
-      expect(msg2).toMatch("invalid input syntax for type integer");
+      [msg1, msg2].forEach(m =>
+        expect(m).toMatch("id must be a `number` type")
+      );
     });
   });
 });

@@ -1,11 +1,12 @@
 import supertest from "supertest";
 
-import { UserModel, ProductModel } from "../../models";
+import { UserModel, ProductModel, AuthModel } from "../../models";
 import { app } from "../../server";
 import { query } from "../../utils";
 import {
   CreateOrder,
   Order,
+  OrderState,
   PopulatedOrder,
   Product,
   UpdateOrder,
@@ -17,6 +18,7 @@ import { generate } from "../../__tests__/utils";
 const userModel = new UserModel();
 const productModel = new ProductModel();
 
+const authModel = new AuthModel();
 const request = supertest(app);
 
 describe("Order Handler", () => {
@@ -25,18 +27,31 @@ describe("Order Handler", () => {
 
   const generateOrder = (): CreateOrder => generate.order(user.id, product.id);
 
-  beforeAll(async () => {
-    user = await userModel.create(generate.user());
-    product = await productModel.create(generate.product());
-  });
+  function clearDB() {
+    return Promise.all(
+      [
+        "DELETE FROM orders *",
+        "DELETE FROM products *",
+        "DELETE FROM users *",
+      ].map(q => query(q))
+    );
+  }
 
-  afterAll(async () => {
-    await query("DELETE FROM orders *");
-    await query("DELETE FROM products *");
-    await query("DELETE FROM users *");
-  });
+  afterAll(clearDB);
 
   describe("Existing end-points", () => {
+    let token: string;
+
+    beforeAll(async () => {
+      user = await userModel.create(generate.user());
+      product = await productModel.create(generate.product());
+
+      const auth = await authModel.signup(generate.signup());
+      token = `Bearer ${auth.token.body}`;
+    });
+
+    afterAll(clearDB);
+
     it("should have GET /orders", async () => {
       const res = await request.get("/orders");
       expect(res.statusCode).not.toEqual(404);
@@ -51,6 +66,20 @@ describe("Order Handler", () => {
       const createRes = await request.post("/orders").send(generateOrder());
       const { id } = createRes.body as Order;
       const res = await request.get(`/orders/${id}`);
+      expect(res.statusCode).not.toEqual(404);
+    });
+
+    it("should have GET /orders/mine", async () => {
+      const res = await request
+        .get(`/orders/mine`)
+        .set({ Authorization: token });
+      expect(res.statusCode).not.toEqual(404);
+    });
+
+    it("should have GET /orders/mine/complete", async () => {
+      const res = await request
+        .get(`/orders/mine/complete`)
+        .set({ Authorization: token });
       expect(res.statusCode).not.toEqual(404);
     });
 
@@ -69,9 +98,26 @@ describe("Order Handler", () => {
     });
   });
 
+  describe("Require authentication", () => {
+    it("should GET /orders/mine require to be authenticated", async () => {
+      const res = await request.get("/orders/mine");
+      expect(res.error).toBeTruthy();
+      expect(res.error && res.error.text).toMatch("You have to signin");
+      expect(res.statusCode).toEqual(401);
+    });
+
+    it("should GET /orders/mine/complete require to be authenticated", async () => {
+      const res = await request.get("/orders/mine/complete");
+      expect(res.error).toBeTruthy();
+      expect(res.error && res.error.text).toMatch("You have to signin");
+      expect(res.statusCode).toEqual(401);
+    });
+  });
+
   describe("Basic functionality", () => {
     beforeAll(async () => {
-      await query("DELETE FROM orders *");
+      user = await userModel.create(generate.user());
+      product = await productModel.create(generate.product());
     });
 
     it("should get the orders on GET /orders", async () => {
@@ -82,7 +128,9 @@ describe("Order Handler", () => {
     it("should create a order on POST /orders", async () => {
       const order = generateOrder();
       const res = await request.post("/orders").send(order);
+
       const resOrder = res.body as PopulatedOrder;
+
       expect(resOrder.product).toEqual(product.name);
       expect(resOrder.u_firstname).toEqual(user.firstname);
       expect(resOrder.quantity).toEqual(order.quantity);
@@ -98,6 +146,64 @@ describe("Order Handler", () => {
       expect(resOrder.u_firstname).toEqual(user.firstname);
       expect(resOrder.quantity).toEqual(order.quantity);
       expect(resOrder.state).toEqual(order.state);
+    });
+
+    it("should get current user's orders on GET /orders/mine", async () => {
+      const auth = await authModel.signup(generate.user());
+
+      const { body: order1 } = await request
+        .post("/orders")
+        .send(generate.order(auth.user.id, product.id));
+      const { body: order2 } = await request
+        .post("/orders")
+        .send(generate.order(auth.user.id, product.id));
+      const { body: order3 } = await request
+        .post("/orders")
+        .send(generate.order(auth.user.id, product.id));
+      const { body: order4 } = await request
+        .post("/orders")
+        .send(generate.order(auth.user.id, product.id));
+
+      const res = await request
+        .get(`/orders/mine`)
+        .set({ Authorization: `Bearer ${auth.token.body}` });
+      const orders = res.body as PopulatedOrder[];
+
+      expect(orders.length).toEqual(4);
+      expect(orders).toEqual([order4, order3, order2, order1]);
+    });
+
+    it("should get current user's completed orders on GET /orders/mine/complete", async () => {
+      const auth = await authModel.signup(generate.user());
+
+      const { body: order1 } = await request.post("/orders").send(
+        generate.order(auth.user.id, product.id, {
+          state: OrderState.COMPLETE,
+        })
+      );
+      await request.post("/orders").send(
+        generate.order(auth.user.id, product.id, {
+          state: OrderState.ACTIVE,
+        })
+      );
+      const { body: order3 } = await request.post("/orders").send(
+        generate.order(auth.user.id, product.id, {
+          state: OrderState.COMPLETE,
+        })
+      );
+      await request.post("/orders").send(
+        generate.order(auth.user.id, product.id, {
+          state: OrderState.ACTIVE,
+        })
+      );
+
+      const res = await request
+        .get(`/orders/mine/complete`)
+        .set({ Authorization: `Bearer ${auth.token.body}` });
+      const orders = res.body as PopulatedOrder[];
+
+      expect(orders.length).toEqual(2);
+      expect(orders).toEqual([order1, order3]);
     });
 
     it("should update the order on PUT /orders/:id", async () => {

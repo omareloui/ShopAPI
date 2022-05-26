@@ -17,6 +17,7 @@ export async function addUser(
 
     const token = authHeader.split("Bearer ")[1];
     const user = await authModel.getMe(token);
+
     req.user = user;
   }
 

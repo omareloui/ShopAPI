@@ -5,7 +5,14 @@ import { OrderState } from "../@types";
 export const showOrderSchema = yup
   .object()
   .shape({
-    id: yup.string().required(),
+    id: yup.number().required(),
+  })
+  .noUnknown();
+
+export const showByUserSchema = yup
+  .object()
+  .shape({
+    userId: yup.number().required(),
   })
   .noUnknown();
 
@@ -32,6 +39,6 @@ export const updateOrderSchema = yup
 export const deleteOrderSchema = yup
   .object()
   .shape({
-    id: yup.string().required(),
+    id: yup.number().required(),
   })
   .noUnknown();

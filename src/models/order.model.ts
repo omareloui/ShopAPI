@@ -5,6 +5,7 @@ import {
   createOrderSchema,
   deleteOrderSchema,
   updateOrderSchema,
+  showByUserSchema,
 } from "../validations";
 
 import type {
@@ -18,19 +19,23 @@ import type {
 } from "../@types";
 
 export class OrderModel {
+  private SQL_ORDER_FIELDS = `
+    orders.id,
+    orders.quantity,
+    orders.state,
+    products.name AS product,
+    products.category AS product_category,
+    products.price AS product_price,
+    users.firstname AS u_firstname,
+    users.lastname AS u_lastname,
+    users.username AS u_username
+  `;
+
   async index(): Promise<PopulatedOrder[]> {
     const result = await query<PopulatedOrder>(
       `
         SELECT
-          orders.id,
-          orders.quantity,
-          orders.state,
-          products.name AS product,
-          products.category AS product_category,
-          products.price AS product_price,
-          users.firstname AS u_firstname,
-          users.lastname AS u_lastname,
-          users.username AS u_username
+          ${this.SQL_ORDER_FIELDS}
         FROM orders
         JOIN products ON orders.product_id=products.id
         JOIN users ON orders.u_id=users.id
@@ -44,15 +49,7 @@ export class OrderModel {
     const result = await query<PopulatedOrder>(
       `
         SELECT
-          orders.id,
-          orders.quantity,
-          orders.state,
-          products.name AS product,
-          products.category AS product_category,
-          products.price AS product_price,
-          users.firstname AS u_firstname,
-          users.lastname AS u_lastname,
-          users.username AS u_username
+          ${this.SQL_ORDER_FIELDS}
         FROM orders
         JOIN products ON orders.product_id = products.id
         JOIN users ON orders.u_id = users.id
@@ -61,6 +58,38 @@ export class OrderModel {
       [id]
     );
     return result.rows[0];
+  }
+
+  async showByUser(userId: UnconfirmedID): Promise<PopulatedOrder[]> {
+    const { userId: uId } = await showByUserSchema.validate({ userId });
+    const result = await query<PopulatedOrder>(
+      `
+        SELECT
+          ${this.SQL_ORDER_FIELDS}
+        FROM orders
+        JOIN products ON orders.product_id = products.id
+        JOIN users ON orders.u_id = users.id
+        WHERE users.id = $1
+      `,
+      [uId]
+    );
+    return result.rows;
+  }
+
+  async showCompleteByUser(userId: UnconfirmedID): Promise<PopulatedOrder[]> {
+    const { userId: uId } = await showByUserSchema.validate({ userId });
+    const result = await query<PopulatedOrder>(
+      `
+        SELECT
+          ${this.SQL_ORDER_FIELDS}
+        FROM orders
+        JOIN products ON orders.product_id = products.id
+        JOIN users ON orders.u_id = users.id
+        WHERE users.id = $1 AND orders.state = 'complete'
+      `,
+      [uId]
+    );
+    return result.rows;
   }
 
   async create(dto: DTO | CreateOrder): Promise<PopulatedOrder> {
