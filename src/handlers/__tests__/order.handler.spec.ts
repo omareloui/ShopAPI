@@ -170,7 +170,10 @@ describe("Order Handler", () => {
       const orders = res.body as PopulatedOrder[];
 
       expect(orders.length).toEqual(4);
-      expect(orders).toEqual([order4, order3, order2, order1]);
+      const sortOrders = (a: PopulatedOrder, b: PopulatedOrder) => a.id - b.id;
+      expect(orders.sort(sortOrders)).toEqual(
+        [order1, order2, order3, order4].sort(sortOrders)
+      );
     });
 
     it("should get current user's completed orders on GET /orders/mine/complete", async () => {
@@ -202,8 +205,12 @@ describe("Order Handler", () => {
         .set({ Authorization: `Bearer ${auth.token.body}` });
       const orders = res.body as PopulatedOrder[];
 
+      const sortOrders = (a: PopulatedOrder, b: PopulatedOrder) => a.id - b.id;
+
       expect(orders.length).toEqual(2);
-      expect(orders).toEqual([order1, order3]);
+      expect(orders.sort(sortOrders)).toEqual(
+        [order1, order3].sort(sortOrders)
+      );
     });
 
     it("should update the order on PUT /orders/:id", async () => {

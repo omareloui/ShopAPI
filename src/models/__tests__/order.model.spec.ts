@@ -238,8 +238,14 @@ describe("Order Model", () => {
       expect(user2Orders.length).toEqual(2);
       expect(user3Orders.length).toEqual(1);
 
-      expect(user1Orders).toEqual([order2, order1]);
-      expect(user2Orders).toEqual([order5, order3]);
+      const sortOrders = (a: PopulatedOrder, b: PopulatedOrder) => a.id - b.id;
+
+      expect(user1Orders.sort(sortOrders)).toEqual(
+        [order1, order2].sort(sortOrders)
+      );
+      expect(user2Orders.sort(sortOrders)).toEqual(
+        [order3, order5].sort(sortOrders)
+      );
       expect(user3Orders).toEqual([order4]);
     });
   });
@@ -276,6 +282,7 @@ describe("Order Model", () => {
       expect(user1CompleteOrders.length).toEqual(1);
       expect(user2CompleteOrders.length).toEqual(1);
       expect(user3CompleteOrders.length).toEqual(0);
+
       expect(user1CompleteOrders).toEqual([order2]);
       expect(user2CompleteOrders).toEqual([order3]);
       expect(user3CompleteOrders).toEqual([]);
