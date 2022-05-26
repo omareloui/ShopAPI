@@ -12,7 +12,7 @@ These are the notes from a meeting with the frontend developer that describe wha
 - [x] Show
 - [x] Create [token required]
 - [ ] [OPTIONAL] Top 5 most popular products
-- [ ] [OPTIONAL] Products by category (args: product category)
+- [x] [OPTIONAL] Products by category (args: product category)
 
 ### Users
 

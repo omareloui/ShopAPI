@@ -5,6 +5,7 @@ import {
   createProductSchema,
   updateProductSchema,
   deleteProductSchema,
+  showProductByCategorySchema,
 } from "../validations";
 
 import type {
@@ -29,6 +30,17 @@ export class ProductModel {
       [id]
     );
     return result.rows[0];
+  }
+
+  async showByCategory(category: string): Promise<Product[]> {
+    const { category: cat } = await showProductByCategorySchema.validate({
+      category,
+    });
+    const result = await query<Product>(
+      "SELECT * FROM products WHERE category = $1",
+      [cat]
+    );
+    return result.rows;
   }
 
   async create(dto: CreateProduct | DTO): Promise<Product> {

@@ -36,6 +36,16 @@ describe("Product Handler", () => {
       expect(res.statusCode).not.toEqual(404);
     });
 
+    it("should have GET /products/category/:cat", async () => {
+      const createRes = await request
+        .post("/products")
+        .set({ Authorization: token })
+        .send(generate.product());
+      const { category } = createRes.body as Product;
+      const res = await request.get(`/products/category/${category}`);
+      expect(res.statusCode).not.toEqual(404);
+    });
+
     it("should have GET /products/:id", async () => {
       const createRes = await request
         .post("/products")
@@ -104,6 +114,21 @@ describe("Product Handler", () => {
       expect(resProduct.category).toEqual(product.category);
       expect(resProduct.name).toEqual(product.name);
       expect(resProduct.price).toEqual(product.price);
+    });
+
+    it("should get products on GET /products/category/:cat", async () => {
+      const product = generate.product();
+      const { body: createdProduct } = await request
+        .post("/products")
+        .set({ Authorization: token })
+        .send(product);
+      const { body: resProducts } = await request.get(
+        `/products/category/${createdProduct.category}`
+      );
+      expect(resProducts.length).toBeGreaterThanOrEqual(1);
+      resProducts.forEach((p: Product) =>
+        expect(p.category).toEqual(product.category)
+      );
     });
 
     it("should get the product on GET /products/:id", async () => {

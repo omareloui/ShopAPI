@@ -16,6 +16,13 @@ export const showProductSchema = yup
   })
   .noUnknown();
 
+export const showProductByCategorySchema = yup
+  .object()
+  .shape({
+    category: yup.string().required(),
+  })
+  .noUnknown();
+
 export const updateProductSchema = yup
   .object()
   .shape({

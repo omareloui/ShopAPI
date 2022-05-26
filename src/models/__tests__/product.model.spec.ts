@@ -90,6 +90,37 @@ describe("Product Model", () => {
     });
   });
 
+  describe("Read category", () => {
+    const products: Product[] = [];
+
+    beforeAll(async () => {
+      const createProduct = (category?: string) =>
+        productModel.create(generate.product(category ? { category } : {}));
+      products.push(await createProduct("cat_to_repeat"));
+      products.push(await createProduct(products[0].category));
+      products.push(await createProduct(products[0].category));
+      products.push(await createProduct());
+      products.push(await createProduct());
+    });
+
+    it("should have a showByCategory method", () => {
+      expect(productModel.showByCategory).toBeDefined();
+    });
+
+    it("should get product with the same provided category", async () => {
+      const categoryProducts = await productModel.showByCategory(
+        products[0].category
+      );
+      expect(categoryProducts.length).toEqual(3);
+      expect(categoryProducts).toEqual([products[0], products[1], products[2]]);
+    });
+
+    it("should throw an error on not providing a category", async () => {
+      const msg = await getError(() => productModel.showByCategory(""));
+      expect(msg).toMatch("category is a required field");
+    });
+  });
+
   describe("Update", () => {
     let product: Product;
 
