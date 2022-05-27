@@ -1,5 +1,5 @@
 import supertest from "supertest";
-import { UpdateProduct, Product } from "../../@types";
+import { UpdateProduct, Product, ProductWQuantity, Auth } from "../../@types";
 import { AuthModel } from "../../models";
 import { app } from "../../server";
 import { query } from "../../utils";
@@ -10,6 +10,12 @@ const authModel = new AuthModel();
 const request = supertest(app);
 
 describe("Product Handler", () => {
+  afterAll(async () => {
+    await query(
+      "DELETE FROM orders *; DELETE FROM users *; DELETE FROM products *"
+    );
+  });
+
   describe("Existing end-points", () => {
     let token: string;
 
@@ -43,6 +49,11 @@ describe("Product Handler", () => {
         .send(generate.product());
       const { category } = createRes.body as Product;
       const res = await request.get(`/products/category/${category}`);
+      expect(res.statusCode).not.toEqual(404);
+    });
+
+    it("should have GET /products/top-five", async () => {
+      const res = await request.get("/products/top-five");
       expect(res.statusCode).not.toEqual(404);
     });
 
@@ -129,6 +140,33 @@ describe("Product Handler", () => {
       resProducts.forEach((p: Product) =>
         expect(p.category).toEqual(product.category)
       );
+    });
+
+    it("should get products on GET /products/top-five", async () => {
+      const resUser = await request.post("/auth/signup").send(generate.user());
+      const auth = resUser.body as Auth;
+
+      const create = async () => {
+        const resProduct = await request
+          .post("/products")
+          .set({ Authorization: token })
+          .send(generate.product());
+        const product = resProduct.body as Product;
+
+        const o = generate.order(auth.user.id, product.id);
+        await request.post("/orders").send(o);
+      };
+
+      for (let i = 0; i < 10; i += 1) await create();
+
+      const res = await request.get("/products/top-five");
+
+      const products = res.body as ProductWQuantity[];
+
+      expect(products.length).not.toBe(0);
+      expect(products.length).toBeLessThanOrEqual(5);
+
+      await query("DELETE FROM orders *");
     });
 
     it("should get the product on GET /products/:id", async () => {

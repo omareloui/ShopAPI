@@ -8,6 +8,10 @@ import { generate } from "../../__tests__/utils";
 const request = supertest(app);
 
 describe("Auth Handler", () => {
+  afterAll(async () => {
+    await query("DELETE FROM users *");
+  });
+
   describe("Existing end-points", () => {
     it("should have POST /auth/signup", async () => {
       const res = await request.post("/auth/signup");
@@ -21,10 +25,6 @@ describe("Auth Handler", () => {
   });
 
   describe("Basic functionality", () => {
-    afterAll(async () => {
-      await query("DELETE FROM users *");
-    });
-
     it("should get the signup the user on POST /auth/signup", async () => {
       const res = await request.post("/auth/signup").send(generate.user());
       const auth = res.body as Auth;

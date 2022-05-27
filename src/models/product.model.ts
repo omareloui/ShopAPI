@@ -15,6 +15,7 @@ import type {
   UnconfirmedID,
   UpdateProduct,
   DeleteResponse,
+  ProductWQuantity,
 } from "../@types";
 
 export class ProductModel {
@@ -41,6 +42,22 @@ export class ProductModel {
       [cat]
     );
     return result.rows;
+  }
+
+  async showTopFive() {
+    const { rows: products } = await query<ProductWQuantity>(
+      `
+        SELECT
+          products.*,
+          SUM(orders.quantity)::INTEGER AS quantity
+        FROM orders
+        JOIN products ON orders.product_id = products.id
+        GROUP BY products.id
+        ORDER BY quantity DESC
+        LIMIT 5
+      `
+    );
+    return products;
   }
 
   async create(dto: CreateProduct | DTO): Promise<Product> {

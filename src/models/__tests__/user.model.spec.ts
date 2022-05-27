@@ -1,7 +1,7 @@
 import { UserModel } from "..";
 import { getError, query } from "../../utils";
 
-import { generate } from "../../__tests__/utils";
+import { generate, clearDB } from "../../__tests__/utils";
 
 import type { User, CreateUser } from "../../@types";
 
@@ -10,9 +10,8 @@ const userModel = new UserModel();
 const BCRYPT_PASS_REGEX = /^\$2b\$.{56}$/i;
 
 describe("User Model", () => {
-  afterAll(async () => {
-    await query("DELETE FROM users *");
-  });
+  beforeAll(clearDB);
+  afterAll(clearDB);
 
   describe("Read all", () => {
     it("should have an index method", () => {

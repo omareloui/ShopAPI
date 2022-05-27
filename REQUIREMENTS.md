@@ -11,7 +11,7 @@ These are the notes from a meeting with the frontend developer that describe wha
 - [x] Index
 - [x] Show
 - [x] Create [token required]
-- [ ] [OPTIONAL] Top 5 most popular products
+- [x] [OPTIONAL] Top 5 most popular products
 - [x] [OPTIONAL] Products by category (args: product category)
 
 ### Users

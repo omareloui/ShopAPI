@@ -21,6 +21,11 @@ const showByCategory: RequestHandler = async (req, res) => {
   res.json(data);
 };
 
+const showTopFive: RequestHandler = async (_req, res) => {
+  const data = await productModel.showTopFive();
+  res.json(data);
+};
+
 const create: RequestHandler = async (req, res) => {
   const data = await productModel.create(req.body);
   res.json(data);
@@ -38,6 +43,7 @@ const destroy: RequestHandler = async (req, res) => {
 
 const router = generateRouter([
   [HTTPMethods.GET, "/products", index],
+  [HTTPMethods.GET, "/products/top-five", showTopFive],
   [HTTPMethods.GET, "/products/category/:cat", showByCategory],
   [HTTPMethods.GET, "/products/:id", show],
   [HTTPMethods.POST, "/products", create, true],
