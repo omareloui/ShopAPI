@@ -175,7 +175,7 @@ These are the notes from a meeting with the frontend developer that describe wha
   `DELETE /orders/:id`
 
   - Requires the product `id` as a `number` as a parameter.
-  - Returns updated order as [DeleteResponse](#delete-response-shape) object.
+  - Returns a [DeleteResponse](#delete-response-shape) object.
 
 ---
 
