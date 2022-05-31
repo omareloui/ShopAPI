@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.ts",
   "scripts": {
-    "start": "cross-env NODE_ENV=production node dist/server",
+    "start": "cross-env NODE_ENV=production node dist/server | npm run log:formatter",
     "dev": "cross-env NODE_ENV=development nodemon -w src src/server.ts | npm run log:formatter",
     "build": "rimraf dist && tsc",
     "migrate:create": "db-migrate create",

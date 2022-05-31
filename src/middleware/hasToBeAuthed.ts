@@ -10,6 +10,6 @@ export async function hasToBeAuthed(
   next: NextFunction
 ) {
   if (!req.user)
-    next(new APIError("You have to signin to view this data.", 401));
+    next(new APIError("You have to signin to complete this action.", 401));
   next();
 }
