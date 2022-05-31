@@ -3,6 +3,7 @@ lockfileVersion: 5.4
 specifiers:
   '@faker-js/faker': ^6.3.1
   '@types/bcrypt': ^5.0.0
+  '@types/cors': ^2.8.12
   '@types/express': ^4.17.9
   '@types/jasmine': ^3.6.3
   '@types/jsonwebtoken': ^8.5.8
@@ -12,6 +13,7 @@ specifiers:
   '@typescript-eslint/eslint-plugin': ^5.25.0
   '@typescript-eslint/parser': ^5.25.0
   bcrypt: ^5.0.1
+  cors: ^2.8.5
   cross-env: ^7.0.3
   db-migrate: ^0.11.13
   db-migrate-pg: ^1.2.2
@@ -44,6 +46,7 @@ specifiers:
 
 dependencies:
   bcrypt: 5.0.1
+  cors: 2.8.5
   cross-env: 7.0.3
   dotenv: 16.0.1
   express: 4.18.1
@@ -57,6 +60,7 @@ dependencies:
 devDependencies:
   '@faker-js/faker': 6.3.1
   '@types/bcrypt': 5.0.0
+  '@types/cors': 2.8.12
   '@types/express': 4.17.13
   '@types/jasmine': 3.10.6
   '@types/jsonwebtoken': 8.5.8
@@ -216,6 +220,10 @@ packages:
 
   /@types/cookiejar/2.1.2:
     resolution: {integrity: sha512-t73xJJrvdTjXrn4jLS9VSGRbz0nUY3cl2DMGDU48lKl+HR9dbbjW2A9r3g40VA++mQpy6uuHg33gy7du2BKpog==}
+    dev: true
+
+  /@types/cors/2.8.12:
+    resolution: {integrity: sha512-vt+kDhq/M2ayberEtJcIN/hxXy1Pk+59g2FV/ZQceeaTyCtCucjL2Q7FXlFjtWn4n15KCr1NE2lNNFhp0lEThw==}
     dev: true
 
   /@types/express-serve-static-core/4.17.28:
@@ -939,6 +947,14 @@ packages:
     resolution: {integrity: sha512-8xo9R00iYD7TcV7OrC98GwxiUEAabVWO3dix+uyWjnYrx9fyASLlIX+f/3p5dW5qByaP2bcZ8X/T47s55et/tA==}
     requiresBuild: true
     dev: true
+
+  /cors/2.8.5:
+    resolution: {integrity: sha512-KIHbLJqu73RGr/hnbrO9uBeixNGuvSQjul/jdFvS/KFSIH1hWVd1ng7zOHx+YrEfInLG7q4n6GHQ9cDtxv/P6g==}
+    engines: {node: '>= 0.10'}
+    dependencies:
+      object-assign: 4.1.1
+      vary: 1.1.2
+    dev: false
 
   /cpu-features/0.0.2:
     resolution: {integrity: sha512-/2yieBqvMcRj8McNzkycjW2v3OIUOibBfd2dLEJ0nWts8NobAxwiyw9phVNS6oDL8x8tz9F7uNVFEVpJncQpeA==}
