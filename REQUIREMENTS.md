@@ -2,6 +2,8 @@
 
 ## API Endpoints
 
+> Note that in end-points that require a token you can get the token from `/auth/signin` or `/auth/signup` and you have to prefix it with `"Bearer "` and add it to `Authorization` header.
+
 ### **Authentication**
 
 - #### **Sign In**
@@ -30,21 +32,21 @@
 
   `GET /users`
 
-  - Requires a _token_ passed to the Authorization header property.
+  - Requires a _token_.
   - Returns an array of [User](#user-shape) objects.
 
 - #### **Show**
 
   `GET /users/:id`
 
-  - Requires a _token_ passed to the Authorization header property. And the required user `id` as a `number` as a parameter.
+  - Requires a _token_. And the required user `id` as a `number` as a parameter.
   - Returns the [User](#user-shape) object.
 
 - #### **Create**
 
   `POST /users`
 
-  - Requires a _token_ passed to the Authorization header property. And to the body:
+  - Requires a _token_. And to the body:
     - `firstname: string`
     - `lastname: string`
     - `username: string`
@@ -55,14 +57,14 @@
 
   `PUT /users/:id`
 
-  - Requires a _token_ passed to the Authorization header property. And the product `id` as a `number` as a parameter. The fields you want to update which could be property from the product except the id.
+  - Requires a _token_. And the product `id` as a `number` as a parameter. The fields you want to update which could be property from the product except the id.
   - Returns the updated [User](#user-shape) object.
 
 - #### **Delete**
 
   `DELETE /users/:id`
 
-  - Requires a _token_ passed to the Authorization header property. And the required user `id` as a `number` as a parameter.
+  - Requires a _token_. And the required user `id` as a `number` as a parameter.
   - Returns a [DeleteResponse](#delete-response-shape) object.
 
 ### **Products**
@@ -92,7 +94,7 @@
 
   `POST /products`
 
-  - Requires a _token_ passed to the Authorization header property.
+  - Requires a _token_.
   - Returns the created [Product](#product-shape) object.
 
 - #### **Top 5 most popular products**
@@ -129,14 +131,14 @@
 
   `GET /orders/mine`
 
-  - Requires a _token_ passed to the Authorization header property and the user id will be extracted from it.
+  - Requires a _token_.
   - Returns an array of [PopulatedOrder](#order-shape) objects.
 
 - #### **Completed Orders By User**
 
   `GET /orders/mine/complete`
 
-  - Requires a _token_ passed to the Authorization header property and the user id will be extracted from it.
+  - Requires a _token_ and the user id will be extracted from it.
   - Returns an array of [PopulatedOrder](#order-shape) objects with a state of complete.
 
 - #### **Show**
