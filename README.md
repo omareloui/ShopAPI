@@ -1,59 +1,98 @@
 # Storefront Backend Project
 
-## Getting Started
+A shop api to control authentication, users, products, and orders. Available end-points can be found in the [REQUIREMENTS.md](/REQUIREMENTS.md) file.
 
-This repo contains a basic Node and Express app to get you started in constructing an API. To get started, clone this repo and run `yarn` in your terminal at the project root.
+## Set up and available scripts
 
-## Required Technologies
+### Building and testing
 
-Your application must make use of the following libraries:
+After cloning the code you need to install the dependencies. You can use `npm` but it's advisable to use `pnpm` instead.
 
-- [x] Postgres for the database
-- [x] Node/Express for the application logic
-- [x] dotenv from npm for managing environment variables
-- [x] db-migrate from npm for migrations
-- [x] jsonwebtoken from npm for working with JWTs
-- [x] jasmine from npm for testing
+```bash
+pnpm i # or npm i
+```
 
-## Steps to Completion
+To start postgres database from the provided `docker-compose.yml` (after setting up the [.env](#env) file).
 
-### 1. Plan to Meet Requirements
+```bash
+docker compose up postgres -d
+```
 
-In this repo there is a `REQUIREMENTS.md` document which outlines what this API needs to supply for the frontend, as well as the agreed upon data shapes to be passed between front and backend. This is much like a document you might come across in real life when building or extending an API.
+To run database migrations run
 
-Your first task is to read the requirements and update the document with the following:
+```bash
+pnpm migrate # or npm run migrate
+```
 
-- Determine the RESTful route for each endpoint listed. Add the RESTful route and HTTP verb to the document so that the frontend developer can begin to build their fetch requests.
+To run the tests run
 
-  **Example**: A SHOW route: 'blogs/:id' [GET]
+```bash
+pnpm test # or npm test
+```
 
-- Design the Postgres database tables based off the data shape requirements. Add to the requirements document the database tables and columns being sure to mark foreign keys.
+Then, to build and use the application you need to run.
 
-  **Example**: You can format this however you like but these types of information should be provided
-  Table: Books (id:varchar, title:varchar, author:varchar, published_year:varchar, publisher_id:string[foreign key to publishers table], pages:number)
+```bash
+pnpm build # or npm run build
+pnpm start # or npm start
+```
 
-**NOTE** It is important to remember that there might not be a one to one ratio between data shapes and database tables. Data shapes only outline the structure of objects being passed between frontend and API, the database may need multiple tables to store a single shape.
+### Linting and formatting
 
-### 2. DB Creation and Migrations
+As for linting and formatting there is scripts for those too.
 
-Now that you have the structure of the database outlined, it is time to create the database and migrations. Add the npm packages dotenv and db-migrate that we used in the course and setup your Postgres database. If you get stuck, you can always revisit the database lesson for a reminder.
+```bash
+# Formatting
+pnpm format # or npm run format
 
-You must also ensure that any sensitive information is hashed with bcrypt. If any passwords are found in plain text in your application it will not pass.
+# Linting
+pnpm lint # or npm run lint
+```
 
-### 3. Models
+### <a name="env"></a>`.env` file
 
-Create the models for each database table. The methods in each model should map to the endpoints in `REQUIREMENTS.md`. Remember that these models should all have test suites and mocks.
+You need to create `.env` file in the root directory to define the configs for the projects
 
-### 4. Express Handlers
+#### Expected options
 
-Set up the Express handlers to route incoming requests to the correct model method. Make sure that the endpoints you create match up with the endpoints listed in `REQUIREMENTS.md`. Endpoints must have tests and be CORS enabled.
+```env
+HOST=
+PORT=
+PORT_TEST=
 
-### 5. JWTs
+PGPORT=
+PGUSER=
+PGPASSWORD=
+PGDATABASE=
+PGDATABASE_TEST=
 
-Add JWT functionality as shown in the course. Make sure that JWTs are required for the routes listed in `REQUIREMENTS.md`.
+SALT_ROUNDS=
+PASSWORD_PEPPER=
 
-### 6. QA and `README.md`
+JWT_SECRET=
+JWT_EXPIRES_IN=
+```
 
-Before submitting, make sure that your project is complete with a `README.md`. Your `README.md` must include instructions for setting up and running your project including how you setup, run, and connect to your database.
+##### **Server**
 
-Before submitting your project, spin it up and test each endpoint. If each one responds with data that matches the data shapes from the `REQUIREMENTS.md`, it is ready for submission!
+- `HOST` the server host. Defaults to `"127.0.0.1"`. Expects a string.
+- `POST` the server port. Defaults to `3000`. Expects a number.
+- `POST_TEST` the server port on testing. Defaults to `4000`. Expects a number.
+
+##### **Postgres**
+
+- `PGPORT` postgres' port. Expects a number.
+- `PGUSER` postgres' user. Expects a string.
+- `PGPASSWORD` postgres' password. Expects a string.
+- `PGDATABASE` postgres' database name. Expects a string.
+- `PGDATABASE_TEST` postgres' testing database name. Expects a string.
+
+##### **Password**
+
+- `SALT_ROUNDS` the salt hashing rounds for the passwords. Expects a number.
+- `PASSWORD_PEPPER` the passwords pepper. Expects a string.
+
+##### **JWT**
+
+- `JWT_SECRET` the secret to create a validate the JWTs. Expects a string.
+- `JWT_EXPIRES_IN` the time the JWT should expire after. Expects a string (eg. "2d" will wait 2 days to expire the token) or a number to define the number of seconds to revoke the token after.
