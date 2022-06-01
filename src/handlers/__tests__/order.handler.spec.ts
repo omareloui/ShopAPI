@@ -159,25 +159,24 @@ describe("Order Handler", () => {
     });
 
     it("should get current user's orders on GET /orders/mine", async () => {
+      const jwt = await getToken();
       const { body: order1 } = await request
         .post("/orders")
-        .set({ Authorization: token })
+        .set({ Authorization: jwt })
         .send(generateOrder());
       const { body: order2 } = await request
         .post("/orders")
-        .set({ Authorization: token })
+        .set({ Authorization: jwt })
         .send(generateOrder());
       const { body: order3 } = await request
         .post("/orders")
-        .set({ Authorization: token })
+        .set({ Authorization: jwt })
         .send(generateOrder());
       const { body: order4 } = await request
         .post("/orders")
-        .set({ Authorization: token })
+        .set({ Authorization: jwt })
         .send(generateOrder());
-      const res = await request
-        .get("/orders/mine")
-        .set({ Authorization: token });
+      const res = await request.get("/orders/mine").set({ Authorization: jwt });
       const orders = res.body as PopulatedOrder[];
       expect(orders.length).toEqual(4);
       const sortOrders = (a: PopulatedOrder, b: PopulatedOrder) => a.id - b.id;
@@ -187,25 +186,26 @@ describe("Order Handler", () => {
     });
 
     it("should get current user's completed orders on GET /orders/mine/complete", async () => {
+      const jwt = await getToken();
       const { body: order1 } = await request
         .post("/orders")
-        .set({ Authorization: token })
+        .set({ Authorization: jwt })
         .send(generateOrder({ state: OrderState.COMPLETE }));
       await request
         .post("/orders")
-        .set({ Authorization: token })
+        .set({ Authorization: jwt })
         .send(generateOrder({ state: OrderState.ACTIVE }));
       const { body: order3 } = await request
         .post("/orders")
-        .set({ Authorization: token })
+        .set({ Authorization: jwt })
         .send(generateOrder({ state: OrderState.COMPLETE }));
       await request
         .post("/orders")
-        .set({ Authorization: token })
+        .set({ Authorization: jwt })
         .send(generateOrder({ state: OrderState.ACTIVE }));
       const res = await request
         .get(`/orders/mine/complete`)
-        .set({ Authorization: token });
+        .set({ Authorization: jwt });
       const orders = res.body as PopulatedOrder[];
       const sortOrders = (a: PopulatedOrder, b: PopulatedOrder) => a.id - b.id;
       expect(orders.length).toEqual(2);
