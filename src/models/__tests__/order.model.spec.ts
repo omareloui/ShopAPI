@@ -1,7 +1,7 @@
 import { UserModel, ProductModel, OrderModel } from "..";
 
-import { query, getError } from "../../utils";
-import { generate } from "../../__tests__/utils";
+import { getError, query } from "../../utils";
+import { clearDB, generate } from "../../__tests__/utils";
 
 import {
   CreateOrder,
@@ -17,24 +17,22 @@ const orderModel = new OrderModel();
 
 describe("Order Model", () => {
   let user: User;
-  let product: Product;
+  const products: Product[] = [];
 
-  const generateOrder = (): CreateOrder => generate.order(user.id, product.id);
+  const generateOrder = (override: Partial<CreateOrder> = {}): CreateOrder =>
+    generate.order(
+      products.map(p => p.id),
+      override
+    );
 
   beforeAll(async () => {
+    await clearDB();
     user = await userModel.create(generate.user());
-    product = await productModel.create(generate.product());
+    products.push(await productModel.create(generate.product()));
+    products.push(await productModel.create(generate.product()));
   });
 
-  afterAll(async () => {
-    await Promise.all(
-      [
-        "DELETE FROM orders *",
-        "DELETE FROM products *",
-        "DELETE FROM users *",
-      ].map(q => query(q))
-    );
-  });
+  afterAll(clearDB);
 
   describe("Read all", () => {
     it("should have an index method", () => {
@@ -47,22 +45,24 @@ describe("Order Model", () => {
     });
 
     it("should join the user and product tables", async () => {
-      await orderModel.create(generateOrder());
+      await orderModel.create(user.id, generateOrder());
 
       const orders = await orderModel.index();
       const o = orders[0];
 
       expect(o.id).toBeDefined();
-      expect(o.product).toBeDefined();
-      expect(o.product_category).toBeDefined();
-      expect(o.product_price).toBeDefined();
-      expect(o.quantity).toBeDefined();
+      expect(o.products).toBeDefined();
+      expect(o.products[0]).toBeDefined();
+      expect(o.products[0].id).toBeDefined();
+      expect(o.products[0].name).toBeDefined();
+      expect(o.products[0].category).toBeDefined();
+      expect(o.products[0].price).toBeDefined();
+      expect(o.products[0].quantity).toBeDefined();
       expect(o.state).toBeDefined();
+      expect(o.u_id).toBeDefined();
       expect(o.u_firstname).toBeDefined();
       expect(o.u_lastname).toBeDefined();
       expect(o.u_username).toBeDefined();
-
-      await query("DELETE FROM orders *");
     });
   });
 
@@ -72,20 +72,33 @@ describe("Order Model", () => {
     });
 
     it("should create a order successfully on providing all valid data", async () => {
-      const createOrder = await orderModel.create(generateOrder());
+      const createOrder = await orderModel.create(user.id, generateOrder());
       expect(createOrder).toBeTruthy();
     });
 
     it("should get the order after creating it", async () => {
       const order = generateOrder();
-      const createdOrder = await orderModel.create(order);
+      const createdOrder = await orderModel.create(user.id, order);
       expect(createdOrder).toEqual({
         id: createdOrder.id,
-        product: product.name,
-        product_category: product.category,
-        product_price: product.price,
-        quantity: order.quantity,
+        products: [
+          {
+            id: products[0].id,
+            name: products[0].name,
+            category: products[0].category,
+            price: products[0].price,
+            quantity: order.products[0].quantity as number,
+          },
+          {
+            id: products[1].id,
+            name: products[1].name,
+            category: products[1].category,
+            price: products[1].price,
+            quantity: order.products[1].quantity as number,
+          },
+        ],
         state: order.state,
+        u_id: user.id,
         u_firstname: user.firstname,
         u_lastname: user.lastname,
         u_username: user.username,
@@ -94,40 +107,54 @@ describe("Order Model", () => {
 
     it("should make sure the product and user ids are valid", async () => {
       const msg1 = await getError(() =>
-        orderModel.create({ ...generateOrder(), product_id: "some_id" })
+        orderModel.create(
+          user.id,
+          generateOrder({
+            products: [{ id: "some_id" as unknown as number, quantity: 2 }],
+          })
+        )
       );
 
       const msg2 = await getError(() =>
-        orderModel.create({ ...generateOrder(), u_id: "" })
+        orderModel.create("" as unknown as number, generateOrder())
       );
 
       [msg1, msg2].forEach(m => expect(m).toMatch("must be a `number` type"));
     });
 
     it("should default to 1 quantity if not provided", async () => {
-      const result = await orderModel.create({
-        ...generateOrder(),
-        quantity: undefined,
-      });
-      expect(result.quantity).toEqual(1);
+      const result = await orderModel.create(
+        user.id,
+        generateOrder({ products: [{ id: products[0].id }] })
+      );
+      expect(result.products[0].quantity).toEqual(1);
     });
 
     it("should accept only positive numbers greater than 1 for quantity", async () => {
       const msg = await getError(() =>
-        orderModel.create({ ...generateOrder(), quantity: -2 })
+        orderModel.create(
+          user.id,
+          generateOrder({ products: [{ id: products[0].id, quantity: -2 }] })
+        )
       );
       expect(msg).toMatch("must be greater than or equal to 1");
     });
 
     it("should only accept 'active' or 'complete' for status", async () => {
       const msg1 = await getError(() =>
-        orderModel.create({ ...generateOrder(), state: OrderState.ACTIVE })
+        orderModel.create(user.id, generateOrder({ state: OrderState.ACTIVE }))
       );
       const msg2 = await getError(() =>
-        orderModel.create({ ...generateOrder(), state: OrderState.COMPLETE })
+        orderModel.create(
+          user.id,
+          generateOrder({ state: OrderState.COMPLETE })
+        )
       );
       const msg3 = await getError(() =>
-        orderModel.create({ ...generateOrder(), state: "invalid_state" })
+        orderModel.create(
+          user.id,
+          generateOrder({ state: "invalid_state" as unknown as OrderState })
+        )
       );
 
       [msg1, msg2].forEach(m => expect(m).toBeFalsy());
@@ -138,26 +165,30 @@ describe("Order Model", () => {
 
     it("should throw an error on providing id for user that doesn't exist", async () => {
       const msg = await getError(() =>
-        orderModel.create({ ...generateOrder, u_id: 5155 })
+        orderModel.create(5155, generateOrder())
       );
       expect(msg).toBeTruthy();
     });
 
     it("should throw an error on providing id for product that doesn't exist", async () => {
       const msg = await getError(() =>
-        orderModel.create({ ...generateOrder, product_id: 5155 })
+        orderModel.create(user.id, generateOrder({ products: [{ id: 5155 }] }))
       );
       expect(msg).toBeTruthy();
     });
 
     it("should populate the product and user", async () => {
-      const order = await orderModel.create(generateOrder());
+      const order = await orderModel.create(user.id, generateOrder());
       expect(order.id).toBeDefined();
-      expect(order.product).toBeDefined();
-      expect(order.product_category).toBeDefined();
-      expect(order.product_price).toBeDefined();
-      expect(order.quantity).toBeDefined();
+      expect(order.products).toBeDefined();
+      expect(order.products[0]).toBeDefined();
+      expect(order.products[0].id).toBeDefined();
+      expect(order.products[0].name).toBeDefined();
+      expect(order.products[0].category).toBeDefined();
+      expect(order.products[0].price).toBeDefined();
+      expect(order.products[0].quantity).toBeDefined();
       expect(order.state).toBeDefined();
+      expect(order.u_id).toBeDefined();
       expect(order.u_firstname).toBeDefined();
       expect(order.u_lastname).toBeDefined();
       expect(order.u_username).toBeDefined();
@@ -168,7 +199,7 @@ describe("Order Model", () => {
     let order: PopulatedOrder;
 
     beforeAll(async () => {
-      order = await orderModel.create(generateOrder());
+      order = await orderModel.create(user.id, generateOrder());
     });
 
     it("should have a show method", () => {
@@ -193,11 +224,15 @@ describe("Order Model", () => {
     it("should join the user and product tables", async () => {
       const o = await orderModel.show(order.id);
       expect(o.id).toBeDefined();
-      expect(o.product).toBeDefined();
-      expect(o.product_category).toBeDefined();
-      expect(o.product_price).toBeDefined();
-      expect(o.quantity).toBeDefined();
+      expect(o.products).toBeDefined();
+      expect(o.products[0]).toBeDefined();
+      expect(o.products[0].id).toBeDefined();
+      expect(o.products[0].name).toBeDefined();
+      expect(o.products[0].category).toBeDefined();
+      expect(o.products[0].price).toBeDefined();
+      expect(o.products[0].quantity).toBeDefined();
       expect(o.state).toBeDefined();
+      expect(o.u_id).toBeDefined();
       expect(o.u_firstname).toBeDefined();
       expect(o.u_lastname).toBeDefined();
       expect(o.u_username).toBeDefined();
@@ -215,19 +250,24 @@ describe("Order Model", () => {
       const user3 = await userModel.create(generate.user());
 
       const order1 = await orderModel.create(
-        generate.order(user1.id, product.id)
+        user1.id,
+        generateOrder({ products: [{ id: products[0].id }] })
       );
       const order2 = await orderModel.create(
-        generate.order(user1.id, product.id)
+        user1.id,
+        generateOrder({ products: [{ id: products[0].id }] })
       );
       const order3 = await orderModel.create(
-        generate.order(user2.id, product.id)
+        user2.id,
+        generateOrder({ products: [{ id: products[0].id }] })
       );
       const order4 = await orderModel.create(
-        generate.order(user3.id, product.id)
+        user3.id,
+        generateOrder({ products: [{ id: products[0].id }] })
       );
       const order5 = await orderModel.create(
-        generate.order(user2.id, product.id)
+        user2.id,
+        generateOrder({ products: [{ id: products[0].id }] })
       );
 
       const user1Orders = await orderModel.showByUser(user1.id);
@@ -260,19 +300,24 @@ describe("Order Model", () => {
       const user2 = await userModel.create(generate.user());
       const user3 = await userModel.create(generate.user());
       await orderModel.create(
-        generate.order(user1.id, product.id, { state: OrderState.ACTIVE })
+        user1.id,
+        generateOrder({ state: OrderState.ACTIVE })
       );
       const order2 = await orderModel.create(
-        generate.order(user1.id, product.id, { state: OrderState.COMPLETE })
+        user1.id,
+        generateOrder({ state: OrderState.COMPLETE })
       );
       const order3 = await orderModel.create(
-        generate.order(user2.id, product.id, { state: OrderState.COMPLETE })
+        user2.id,
+        generateOrder({ state: OrderState.COMPLETE })
       );
       await orderModel.create(
-        generate.order(user3.id, product.id, { state: OrderState.ACTIVE })
+        user3.id,
+        generateOrder({ state: OrderState.ACTIVE })
       );
       await orderModel.create(
-        generate.order(user2.id, product.id, { state: OrderState.ACTIVE })
+        user2.id,
+        generateOrder({ state: OrderState.ACTIVE })
       );
 
       const user1CompleteOrders = await orderModel.showCompleteByUser(user1.id);
@@ -289,123 +334,11 @@ describe("Order Model", () => {
     });
   });
 
-  describe("Update", () => {
-    let order: PopulatedOrder;
-
-    beforeEach(async () => {
-      order = await orderModel.create(generateOrder());
-    });
-
-    it("should have an update method", () => {
-      expect(orderModel.update).toBeDefined();
-    });
-
-    it("should update the quantity field to 500", async () => {
-      const result = await orderModel.update(order.id, { quantity: 500 });
-      expect(result.quantity).toBe(500);
-    });
-
-    it("should get the order after updating it", async () => {
-      const result = await orderModel.update(order.id, {
-        state: OrderState.COMPLETE,
-      });
-      expect(result.id).toBeDefined();
-      expect(result.quantity).toBeDefined();
-      expect(result.state).toBeDefined();
-    });
-
-    it("should do nothing on providing no data to update", async () => {
-      const msg = await getError(() => orderModel.update(order.id, {}));
-      expect(msg).toMatch("No fields provided to update");
-    });
-
-    it("should update the product_id and u_id fields", async () => {
-      const result = await orderModel.update(order.id, {
-        product_id: product.id,
-        u_id: user.id,
-      });
-      expect(result.u_firstname).toBe(user.firstname);
-      expect(result.product).toBe(product.name);
-    });
-
-    it("should update only the provided fields", async () => {
-      const result = await orderModel.update(order.id, {
-        state: OrderState.COMPLETE,
-      });
-      expect(result.product).toEqual(order.product);
-      expect(result.quantity).toEqual(order.quantity);
-      expect(result.u_firstname).toEqual(order.u_firstname);
-      expect(result.state).toEqual(OrderState.COMPLETE);
-    });
-
-    it("should not use any extra invalid provided data", async () => {
-      const result = await orderModel.update(order.id, {
-        quantity: 400,
-        invalidField: false,
-      });
-      expect(
-        (result as PopulatedOrder & { invalidField: boolean }).invalidField
-      ).not.toBeDefined();
-    });
-
-    it("should throw error on invalid id", async () => {
-      const msg1 = await getError(() =>
-        orderModel.show("" as unknown as number)
-      );
-      const msg2 = await getError(() =>
-        orderModel.show("some_test" as unknown as number)
-      );
-      [msg1, msg2].forEach(m => expect(m).toMatch("id must be a `number`"));
-    });
-
-    it("should throw error on providing invalid values", async () => {
-      const msg1 = await getError(() =>
-        orderModel.update(order.id, { quantity: "hi" })
-      );
-      const msg2 = await getError(() =>
-        orderModel.update(order.id, { product_id: "some_id" })
-      );
-      expect(msg1).toMatch("quantity must be a `number` type");
-      expect(msg2).toMatch("product_id must be a `number` type");
-    });
-
-    it("should throw an error on providing id for user that doesn't exist", async () => {
-      const msg = await getError(() =>
-        orderModel.update(order.id, { u_id: 1000 })
-      );
-      expect(msg).toBeTruthy();
-    });
-
-    it("should throw an error on providing id for product that doesn't exist", async () => {
-      const msg = await getError(() =>
-        orderModel.update(order.id, { product_id: 1000 })
-      );
-      expect(msg).toBeTruthy();
-    });
-
-    it("should join the user and product tables", async () => {
-      const o = await orderModel.update(order.id, { u_id: user.id });
-      expect(o.id).toBeDefined();
-      expect(o.product).toBeDefined();
-      expect(o.product_category).toBeDefined();
-      expect(o.product_price).toBeDefined();
-      expect(o.quantity).toBeDefined();
-      expect(o.state).toBeDefined();
-      expect(o.u_firstname).toBeDefined();
-      expect(o.u_lastname).toBeDefined();
-      expect(o.u_username).toBeDefined();
-    });
-  });
-
   describe("Delete", () => {
     let order: PopulatedOrder;
 
     beforeEach(async () => {
-      order = await orderModel.create(generateOrder());
-    });
-
-    afterEach(async () => {
-      await orderModel.delete(order.id);
+      order = await orderModel.create(user.id, generateOrder());
     });
 
     it("should have a delete method", () => {
@@ -415,6 +348,15 @@ describe("Order Model", () => {
     it("should delete the created order", async () => {
       const result = await orderModel.delete(order.id);
       expect(result).toEqual({ ok: true });
+    });
+
+    it("should delete all records from order_products", async () => {
+      await orderModel.delete(order.id);
+      const orderProductsRes = await query(
+        "SELECT * from order_products WHERE order_id = $1",
+        [order.id]
+      );
+      expect(orderProductsRes.rows.length).toEqual(0);
     });
 
     it("should throw an error on not providing an id", async () => {

@@ -16,23 +16,21 @@ export const showByUserSchema = yup
   })
   .noUnknown();
 
+export const userIdForOrderSchema = yup.number().required();
+
 export const createOrderSchema = yup
   .object()
   .shape({
-    product_id: yup.number().required(),
-    u_id: yup.number().required(),
-    quantity: yup.number().default(1).min(1),
+    products: yup
+      .array()
+      .min(1)
+      .of(
+        yup
+          .object()
+          .shape({ id: yup.number(), quantity: yup.number().default(1).min(1) })
+      )
+      .required(),
     state: yup.mixed<OrderState>().oneOf(Object.values(OrderState)).required(),
-  })
-  .noUnknown();
-
-export const updateOrderSchema = yup
-  .object()
-  .shape({
-    product_id: yup.number(),
-    u_id: yup.number(),
-    quantity: yup.number().min(1),
-    state: yup.mixed<OrderState>().oneOf(Object.values(OrderState)),
   })
   .noUnknown();
 

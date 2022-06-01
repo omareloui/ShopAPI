@@ -1,3 +1,5 @@
+import { Product } from ".";
+
 export enum OrderState {
   ACTIVE = "active",
   COMPLETE = "complete",
@@ -5,26 +7,57 @@ export enum OrderState {
 
 export interface Order {
   id: number;
-  product_id: number;
   u_id: number;
-  quantity: number;
   state: OrderState;
 }
-export interface PopulatedOrder {
+
+export interface OrderWUser {
   id: number;
+  state: OrderState;
 
-  product: string;
-  product_price: number;
-  product_category: string;
-
+  u_id: number;
   u_firstname: string;
   u_lastname: string;
   u_username: string;
+}
 
+export interface OrderProducts {
+  id: number;
+  product_id: number;
+  order_id: number;
   quantity: number;
+}
+
+export interface PopulatedOrderProducts {
+  id: number;
+  product_id: number;
+  order_id: number;
+  quantity: number;
+  u_id: number;
+  state: OrderState;
+  firstname: string;
+  lastname: string;
+  password: string;
+  username: string;
+  name: string;
+  price: number;
+  category: string;
+}
+
+export interface ProductForCreateOrder {
+  id: number;
+  quantity?: number;
+}
+
+export interface OrderProduct extends Product {
+  quantity: number;
+}
+
+export interface CreateOrder {
+  products: ProductForCreateOrder[];
   state: OrderState;
 }
 
-export type CreateOrder = Omit<Order, "id">;
-
-export type UpdateOrder = Partial<CreateOrder>;
+export interface PopulatedOrder extends OrderWUser {
+  products: OrderProduct[];
+}

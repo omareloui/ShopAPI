@@ -31,12 +31,10 @@ const showMineComplete: RequestHandler = async (req, res) => {
 };
 
 const create: RequestHandler = async (req, res) => {
-  const data = await orderModel.create(req.body);
-  res.json(data);
-};
-
-const update: RequestHandler = async (req, res) => {
-  const data = await orderModel.update(parseInt(req.params.id, 10), req.body);
+  const data = await orderModel.create(
+    (req as AuthenticatedRequest).user.id,
+    req.body
+  );
   res.json(data);
 };
 
@@ -50,8 +48,7 @@ const router = generateRouter([
   [HTTPMethods.GET, "/orders/mine", showMine, true],
   [HTTPMethods.GET, "/orders/mine/complete", showMineComplete, true],
   [HTTPMethods.GET, "/orders/:id", show],
-  [HTTPMethods.POST, "/orders", create],
-  [HTTPMethods.PUT, "/orders/:id", update],
+  [HTTPMethods.POST, "/orders", create, true],
   [HTTPMethods.DELETE, "/orders/:id", destroy],
 ]);
 

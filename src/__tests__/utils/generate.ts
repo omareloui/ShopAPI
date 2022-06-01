@@ -39,13 +39,13 @@ const generate = {
   }),
 
   order: (
-    userId: number,
-    productId: number,
+    productsIds: number[],
     override: Partial<CreateOrder> = {}
   ): CreateOrder => ({
-    u_id: userId,
-    product_id: productId,
-    quantity: parseInt(faker.random.numeric(), 10),
+    products: productsIds.map(pId => ({
+      id: pId,
+      quantity: parseInt(faker.random.numeric(), 10),
+    })),
     state: OrderState.ACTIVE,
     ...override,
   }),

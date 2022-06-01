@@ -9,6 +9,7 @@
     "build": "rimraf dist && tsc",
     "migrate:create": "db-migrate create",
     "migrate": "db-migrate up",
+    "migrate:down": "db-migrate down",
     "test": "db-migrate up -e test && cross-env NODE_ENV=test jasmine-ts && db-migrate db:drop test",
     "log:formatter": "pino-pretty -t \"yyyy-mm-dd HH:MM:ss.l\" -i pid,hostname",
     "lint": "eslint src",

@@ -1,11 +1,11 @@
-import { buildUpdateQuery, query } from "../utils";
+import { query } from "../utils";
 
 import {
   showOrderSchema,
   createOrderSchema,
   deleteOrderSchema,
-  updateOrderSchema,
   showByUserSchema,
+  userIdForOrderSchema,
 } from "../validations";
 
 import type {
@@ -14,110 +14,132 @@ import type {
   UnconfirmedID,
   DTO,
   DeleteResponse,
-  UpdateOrder,
   PopulatedOrder,
+  OrderProducts,
+  PopulatedOrderProducts,
 } from "../@types";
 
 export class OrderModel {
-  private SQL_ORDER_FIELDS = `
-    orders.id,
-    orders.quantity,
-    orders.state,
-    products.name AS product,
-    products.category AS product_category,
-    products.price AS product_price,
-    users.firstname AS u_firstname,
-    users.lastname AS u_lastname,
-    users.username AS u_username
-  `;
-
   async index(): Promise<PopulatedOrder[]> {
-    const result = await query<PopulatedOrder>(
+    const result = await query<PopulatedOrderProducts>(
       `
-        SELECT
-          ${this.SQL_ORDER_FIELDS}
-        FROM orders
-        JOIN products ON orders.product_id=products.id
-        JOIN users ON orders.u_id=users.id
+        SELECT *
+        FROM order_products
+        JOIN orders ON orders.id = order_products.order_id
+        JOIN users ON orders.u_id = users.id
+        JOIN products ON products.id = order_products.product_id
       `
     );
-    return result.rows;
+    return this.populatedOrderProductsToPopulatedOrder(result.rows);
   }
 
   async show(orderId: UnconfirmedID): Promise<PopulatedOrder> {
     const { id } = await showOrderSchema.validate({ id: orderId });
-    const result = await query<PopulatedOrder>(
+    const orderResult = await query<PopulatedOrderProducts>(
       `
-        SELECT
-          ${this.SQL_ORDER_FIELDS}
-        FROM orders
-        JOIN products ON orders.product_id = products.id
+        SELECT *
+        FROM order_products
+        JOIN orders ON orders.id = order_products.order_id
         JOIN users ON orders.u_id = users.id
-        WHERE orders.id = $1
+        JOIN products ON products.id = order_products.product_id
+        WHERE order_products.order_id = $1
       `,
       [id]
     );
-    return result.rows[0];
+
+    return this.populatedOrderProductsToPopulatedOrder(orderResult.rows)[0];
   }
 
   async showByUser(userId: UnconfirmedID): Promise<PopulatedOrder[]> {
     const { userId: uId } = await showByUserSchema.validate({ userId });
-    const result = await query<PopulatedOrder>(
+    const result = await query<PopulatedOrderProducts>(
       `
-        SELECT
-          ${this.SQL_ORDER_FIELDS}
-        FROM orders
-        JOIN products ON orders.product_id = products.id
+        SELECT *
+        FROM order_products
+        JOIN orders ON orders.id = order_products.order_id
         JOIN users ON orders.u_id = users.id
-        WHERE users.id = $1
+        JOIN products ON products.id = order_products.product_id
+        WHERE orders.u_id = $1
       `,
       [uId]
     );
-    return result.rows;
+    return this.populatedOrderProductsToPopulatedOrder(result.rows);
   }
 
   async showCompleteByUser(userId: UnconfirmedID): Promise<PopulatedOrder[]> {
     const { userId: uId } = await showByUserSchema.validate({ userId });
-    const result = await query<PopulatedOrder>(
+    const result = await query<PopulatedOrderProducts>(
       `
-        SELECT
-          ${this.SQL_ORDER_FIELDS}
-        FROM orders
-        JOIN products ON orders.product_id = products.id
+        SELECT *
+        FROM order_products
+        JOIN orders ON orders.id = order_products.order_id
         JOIN users ON orders.u_id = users.id
-        WHERE users.id = $1 AND orders.state = 'complete'
+        JOIN products ON products.id = order_products.product_id
+        WHERE orders.u_id = $1 AND orders.state = 'complete'
       `,
       [uId]
     );
-    return result.rows;
+    return this.populatedOrderProductsToPopulatedOrder(result.rows);
   }
 
-  async create(dto: DTO | CreateOrder): Promise<PopulatedOrder> {
-    const { u_id, product_id, quantity, state } =
-      await createOrderSchema.validate(dto);
-    const result = await query<Order>(
-      "INSERT INTO orders (u_id, product_id, quantity, state) VALUES ($1, $2, $3,$4) RETURNING *",
-      [u_id, product_id, quantity, state]
-    );
-    const order = await this.show(result.rows[0].id);
-    return order;
-  }
-
-  async update(
-    orderId: UnconfirmedID,
-    dto: UpdateOrder | DTO
+  async create(
+    userId: UnconfirmedID,
+    dto: DTO | CreateOrder
   ): Promise<PopulatedOrder> {
-    const vData = await updateOrderSchema.validate({ ...dto, id: orderId });
-    delete (vData as { id?: number }).id;
-    const { query: q, fields } = buildUpdateQuery("orders", vData, orderId!);
-    const result = await query<Order>(q, fields);
-    const order = await this.show(result.rows[0].id);
-    return order;
+    const vUserId = await userIdForOrderSchema.validate(userId);
+    const { products, state } = await createOrderSchema.validate(dto);
+
+    const orderResult = await query<Order>(
+      "INSERT INTO orders (u_id, state) VALUES ($1, $2) RETURNING *",
+      [vUserId, state]
+    );
+    const { id: orderId } = orderResult.rows[0];
+
+    await Promise.all(
+      products.map(p =>
+        query<OrderProducts>(
+          "INSERT INTO order_products (order_id, product_id, quantity) VALUES ($1, $2, $3) RETURNING *",
+          [orderId, p.id, p.quantity]
+        )
+      )
+    );
+
+    return this.show(orderId);
   }
 
   async delete(orderId: UnconfirmedID): Promise<DeleteResponse> {
     const { id } = await deleteOrderSchema.validate({ id: orderId });
+    await query("DELETE FROM order_products WHERE order_id = $1", [id]);
     const result = await query("DELETE FROM orders WHERE id = $1", [id]);
     return { ok: result.rowCount === 1 };
+  }
+
+  private populatedOrderProductsToPopulatedOrder(
+    pop: PopulatedOrderProducts[]
+  ): PopulatedOrder[] {
+    const orders: Map<number, PopulatedOrder> = new Map();
+
+    pop.forEach(p => {
+      const prevProducts = orders.get(p.order_id)?.products || [];
+      orders.set(p.order_id, {
+        id: p.order_id,
+        state: p.state,
+        u_id: p.u_id,
+        u_firstname: p.firstname,
+        u_lastname: p.lastname,
+        u_username: p.username,
+        products: [
+          ...prevProducts,
+          {
+            id: p.product_id,
+            name: p.name,
+            price: p.price,
+            category: p.category,
+            quantity: p.quantity,
+          },
+        ],
+      });
+    });
+    return [...orders.values()];
   }
 }

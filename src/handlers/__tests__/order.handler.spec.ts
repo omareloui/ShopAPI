@@ -1,41 +1,35 @@
 import supertest from "supertest";
 
-import { UserModel, ProductModel, AuthModel } from "../../models";
+import { ProductModel, AuthModel } from "../../models";
 import { app } from "../../server";
-import { query } from "../../utils";
 import {
   CreateOrder,
   Order,
   OrderState,
   PopulatedOrder,
   Product,
-  UpdateOrder,
-  User,
+  Signup,
 } from "../../@types";
 
-import { generate } from "../../__tests__/utils";
+import { clearDB, generate } from "../../__tests__/utils";
 
-const userModel = new UserModel();
 const productModel = new ProductModel();
 
 const authModel = new AuthModel();
 const request = supertest(app);
 
 describe("Order Handler", () => {
-  let user: User;
-  let product: Product;
+  let products: Product[] = [];
 
-  const generateOrder = (): CreateOrder => generate.order(user.id, product.id);
-
-  function clearDB() {
-    return Promise.all(
-      [
-        "DELETE FROM orders *",
-        "DELETE FROM products *",
-        "DELETE FROM users *",
-      ].map(q => query(q))
+  const generateOrder = (override: Partial<CreateOrder> = {}): CreateOrder =>
+    generate.order(
+      products.map(p => p.id),
+      override
     );
-  }
+  const getToken = async (signupOptions?: Signup) => {
+    const auth = await authModel.signup(signupOptions || generate.signup());
+    return `Bearer ${auth.token.body}`;
+  };
 
   afterAll(clearDB);
 
@@ -43,14 +37,15 @@ describe("Order Handler", () => {
     let token: string;
 
     beforeAll(async () => {
-      user = await userModel.create(generate.user());
-      product = await productModel.create(generate.product());
-
-      const auth = await authModel.signup(generate.signup());
-      token = `Bearer ${auth.token.body}`;
+      products.push(await productModel.create(generate.product()));
+      products.push(await productModel.create(generate.product()));
+      token = await getToken();
     });
 
-    afterAll(clearDB);
+    afterAll(async () => {
+      await clearDB();
+      products = [];
+    });
 
     it("should have GET /orders", async () => {
       const res = await request.get("/orders");
@@ -58,7 +53,10 @@ describe("Order Handler", () => {
     });
 
     it("should have POST /orders", async () => {
-      const res = await request.post("/orders").send(generateOrder());
+      const res = await request
+        .post("/orders")
+        .send(generateOrder())
+        .set({ Authorization: token });
       expect(res.statusCode).not.toEqual(404);
     });
 
@@ -89,16 +87,16 @@ describe("Order Handler", () => {
       const res = await request.delete(`/orders/${id}`);
       expect(res.statusCode).not.toEqual(404);
     });
-
-    it("should have PUT /orders/:id", async () => {
-      const createRes = await request.post("/orders").send(generateOrder());
-      const { id } = createRes.body as Order;
-      const res = await request.put(`/orders/${id}`);
-      expect(res.statusCode).not.toEqual(404);
-    });
   });
 
   describe("Require authentication", () => {
+    it("should POST /orders require to be authenticated", async () => {
+      const res = await request.post("/orders");
+      expect(res.error).toBeTruthy();
+      expect(res.error && res.error.text).toMatch("You have to signin");
+      expect(res.statusCode).toEqual(401);
+    });
+
     it("should GET /orders/mine require to be authenticated", async () => {
       const res = await request.get("/orders/mine");
       expect(res.error).toBeTruthy();
@@ -115,10 +113,16 @@ describe("Order Handler", () => {
   });
 
   describe("Basic functionality", () => {
+    let token: string;
+
     beforeAll(async () => {
-      user = await userModel.create(generate.user());
-      product = await productModel.create(generate.product());
+      token = await getToken();
+      products = [];
+      products.push(await productModel.create(generate.product()));
+      products.push(await productModel.create(generate.product()));
     });
+
+    afterAll(clearDB);
 
     it("should get the orders on GET /orders", async () => {
       const res = await request.get("/orders");
@@ -126,49 +130,55 @@ describe("Order Handler", () => {
     });
 
     it("should create a order on POST /orders", async () => {
-      const order = generateOrder();
-      const res = await request.post("/orders").send(order);
-
+      const signupOptions = generate.signup();
+      const jwt = await getToken(signupOptions);
+      const order = generateOrder({ products: [products[0]] });
+      const res = await request
+        .post("/orders")
+        .set({ Authorization: jwt })
+        .send(order);
       const resOrder = res.body as PopulatedOrder;
-
-      expect(resOrder.product).toEqual(product.name);
-      expect(resOrder.u_firstname).toEqual(user.firstname);
-      expect(resOrder.quantity).toEqual(order.quantity);
+      expect(resOrder.products[0].id).toEqual(order.products[0].id);
+      expect(resOrder.u_firstname).toEqual(signupOptions.firstname);
       expect(resOrder.state).toEqual(order.state);
     });
 
     it("should get the order on GET /orders/:id", async () => {
-      const order = generateOrder();
-      const { body: createdOrder } = await request.post("/orders").send(order);
+      const signupOptions = generate.signup();
+      const jwt = await getToken(signupOptions);
+      const order = generateOrder({ products: [products[0]] });
+      const { body: createdOrder } = await request
+        .post("/orders")
+        .set({ Authorization: jwt })
+        .send(order);
       const res = await request.get(`/orders/${createdOrder.id}`);
       const resOrder = res.body as PopulatedOrder;
-      expect(resOrder.product).toEqual(product.name);
-      expect(resOrder.u_firstname).toEqual(user.firstname);
-      expect(resOrder.quantity).toEqual(order.quantity);
+      expect(resOrder.products[0].id).toEqual(order.products[0].id);
+      expect(resOrder.u_firstname).toEqual(signupOptions.firstname);
       expect(resOrder.state).toEqual(order.state);
     });
 
     it("should get current user's orders on GET /orders/mine", async () => {
-      const auth = await authModel.signup(generate.user());
-
       const { body: order1 } = await request
         .post("/orders")
-        .send(generate.order(auth.user.id, product.id));
+        .set({ Authorization: token })
+        .send(generateOrder());
       const { body: order2 } = await request
         .post("/orders")
-        .send(generate.order(auth.user.id, product.id));
+        .set({ Authorization: token })
+        .send(generateOrder());
       const { body: order3 } = await request
         .post("/orders")
-        .send(generate.order(auth.user.id, product.id));
+        .set({ Authorization: token })
+        .send(generateOrder());
       const { body: order4 } = await request
         .post("/orders")
-        .send(generate.order(auth.user.id, product.id));
-
+        .set({ Authorization: token })
+        .send(generateOrder());
       const res = await request
-        .get(`/orders/mine`)
-        .set({ Authorization: `Bearer ${auth.token.body}` });
+        .get("/orders/mine")
+        .set({ Authorization: token });
       const orders = res.body as PopulatedOrder[];
-
       expect(orders.length).toEqual(4);
       const sortOrders = (a: PopulatedOrder, b: PopulatedOrder) => a.id - b.id;
       expect(orders.sort(sortOrders)).toEqual(
@@ -177,54 +187,40 @@ describe("Order Handler", () => {
     });
 
     it("should get current user's completed orders on GET /orders/mine/complete", async () => {
-      const auth = await authModel.signup(generate.user());
-
-      const { body: order1 } = await request.post("/orders").send(
-        generate.order(auth.user.id, product.id, {
-          state: OrderState.COMPLETE,
-        })
-      );
-      await request.post("/orders").send(
-        generate.order(auth.user.id, product.id, {
-          state: OrderState.ACTIVE,
-        })
-      );
-      const { body: order3 } = await request.post("/orders").send(
-        generate.order(auth.user.id, product.id, {
-          state: OrderState.COMPLETE,
-        })
-      );
-      await request.post("/orders").send(
-        generate.order(auth.user.id, product.id, {
-          state: OrderState.ACTIVE,
-        })
-      );
-
+      const { body: order1 } = await request
+        .post("/orders")
+        .set({ Authorization: token })
+        .send(generateOrder({ state: OrderState.COMPLETE }));
+      await request
+        .post("/orders")
+        .set({ Authorization: token })
+        .send(generateOrder({ state: OrderState.ACTIVE }));
+      const { body: order3 } = await request
+        .post("/orders")
+        .set({ Authorization: token })
+        .send(generateOrder({ state: OrderState.COMPLETE }));
+      await request
+        .post("/orders")
+        .set({ Authorization: token })
+        .send(generateOrder({ state: OrderState.ACTIVE }));
       const res = await request
         .get(`/orders/mine/complete`)
-        .set({ Authorization: `Bearer ${auth.token.body}` });
+        .set({ Authorization: token });
       const orders = res.body as PopulatedOrder[];
-
       const sortOrders = (a: PopulatedOrder, b: PopulatedOrder) => a.id - b.id;
-
       expect(orders.length).toEqual(2);
       expect(orders.sort(sortOrders)).toEqual(
         [order1, order3].sort(sortOrders)
       );
     });
 
-    it("should update the order on PUT /orders/:id", async () => {
-      const order = generateOrder();
-      const { body: createdOrder } = await request.post("/orders").send(order);
-      const { body: resOrder } = await request
-        .put(`/orders/${createdOrder.id}`)
-        .send({ quantity: 899 } as UpdateOrder);
-      expect(resOrder.quantity).toEqual(899);
-    });
-
     it("should delete the order on DELETE /orders/:id", async () => {
       const order = generateOrder();
-      const { body: createdOrder } = await request.post("/orders").send(order);
+      const createdOrderRes = await request
+        .post("/orders")
+        .set({ Authorization: token })
+        .send(order);
+      const createdOrder = createdOrderRes.body as PopulatedOrder;
       const { body } = await request.delete(`/orders/${createdOrder.id}`);
       expect(body.ok).toBeTrue();
     });
