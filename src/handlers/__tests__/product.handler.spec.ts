@@ -1,10 +1,10 @@
 import supertest from "supertest";
-import { UpdateProduct, Product, ProductWQuantity, Auth } from "../../@types";
+import { UpdateProduct, Product, OrderProduct } from "../../@types";
 import { AuthModel } from "../../models";
 import { app } from "../../server";
 import { query } from "../../utils";
 
-import { generate } from "../../__tests__/utils";
+import { clearDB, generate } from "../../__tests__/utils";
 
 const authModel = new AuthModel();
 const request = supertest(app);
@@ -105,10 +105,7 @@ describe("Product Handler", () => {
       token = `Bearer ${auth.token.body}`;
     });
 
-    afterAll(async () => {
-      await query("DELETE FROM products *");
-      await query("DELETE FROM users *");
-    });
+    afterAll(clearDB);
 
     it("should get the products on GET /products", async () => {
       const res = await request.get("/products");
@@ -142,31 +139,27 @@ describe("Product Handler", () => {
       );
     });
 
-    xit("should get products on GET /products/top-five", async () => {
-      const resUser = await request.post("/auth/signup").send(generate.user());
-      const auth = resUser.body as Auth;
-
+    it("should get products on GET /products/top-five", async () => {
       const create = async () => {
         const resProduct = await request
           .post("/products")
           .set({ Authorization: token })
           .send(generate.product());
         const product = resProduct.body as Product;
-
         const o = generate.order([product.id]);
-        await request.post("/orders").send(o);
+        await request.post("/orders").set({ Authorization: token }).send(o);
       };
 
       for (let i = 0; i < 10; i += 1) await create();
 
       const res = await request.get("/products/top-five");
 
-      const products = res.body as ProductWQuantity[];
+      const products = res.body as OrderProduct[];
 
       expect(products.length).not.toBe(0);
       expect(products.length).toBeLessThanOrEqual(5);
 
-      await query("DELETE FROM orders *");
+      await query("DELETE FROM order_products *; DELETE FROM orders *;");
     });
 
     it("should get the product on GET /products/:id", async () => {

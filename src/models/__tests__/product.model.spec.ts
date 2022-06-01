@@ -2,16 +2,14 @@ import { ProductModel } from "..";
 import { getError, query } from "../../utils";
 
 import type { Product } from "../../@types";
-import { generate } from "../../__tests__/utils";
+import { clearDB, generate } from "../../__tests__/utils";
 import { OrderModel } from "../order.model";
 import { UserModel } from "../user.model";
 
 const productModel = new ProductModel();
 
 describe("Product Model", () => {
-  afterAll(async () => {
-    await query("DELETE FROM products *");
-  });
+  afterAll(clearDB);
 
   describe("Read all", () => {
     it("should have an index method", () => {
@@ -124,11 +122,13 @@ describe("Product Model", () => {
   });
 
   describe("Read top five", () => {
+    beforeAll(clearDB);
+
     it("should have showTopFive method", () => {
       expect(productModel.showTopFive).toBeDefined();
     });
 
-    xit("should get the top five ordered products", async () => {
+    it("should get the top five ordered products", async () => {
       const userModel = new UserModel();
       const orderModel = new OrderModel();
 
@@ -142,36 +142,46 @@ describe("Product Model", () => {
       const product6 = await productModel.create(generate.product());
       const product7 = await productModel.create(generate.product());
 
-      // await orderModel.create(
-      //   generate.order(user.id, product1.id, { quantity: 10 })
-      // );
-      // await orderModel.create(
-      //   generate.order(user.id, product2.id, { quantity: 1 })
-      // );
-      // await orderModel.create(
-      //   generate.order(user.id, product3.id, { quantity: 1000 })
-      // );
-      // await orderModel.create(
-      //   generate.order(user.id, product2.id, { quantity: 1 })
-      // );
-      // await orderModel.create(
-      //   generate.order(user.id, product2.id, { quantity: 1 })
-      // );
-      // await orderModel.create(
-      //   generate.order(user.id, product2.id, { quantity: 1 })
-      // );
-      // await orderModel.create(
-      //   generate.order(user.id, product4.id, { quantity: 2 })
-      // );
-      // await orderModel.create(
-      //   generate.order(user.id, product5.id, { quantity: 1 })
-      // );
-      // await orderModel.create(
-      //   generate.order(user.id, product6.id, { quantity: 1 })
-      // );
-      // await orderModel.create(
-      //   generate.order(user.id, product7.id, { quantity: 1 })
-      // );
+      await orderModel.create(
+        user.id,
+        generate.order([], { products: [{ id: product1.id, quantity: 10 }] })
+      );
+      await orderModel.create(
+        user.id,
+        generate.order([], { products: [{ id: product2.id, quantity: 1 }] })
+      );
+      await orderModel.create(
+        user.id,
+        generate.order([], { products: [{ id: product3.id, quantity: 1000 }] })
+      );
+      await orderModel.create(
+        user.id,
+        generate.order([], { products: [{ id: product2.id, quantity: 1 }] })
+      );
+      await orderModel.create(
+        user.id,
+        generate.order([], { products: [{ id: product2.id, quantity: 1 }] })
+      );
+      await orderModel.create(
+        user.id,
+        generate.order([], { products: [{ id: product2.id, quantity: 1 }] })
+      );
+      await orderModel.create(
+        user.id,
+        generate.order([], { products: [{ id: product4.id, quantity: 2 }] })
+      );
+      await orderModel.create(
+        user.id,
+        generate.order([], { products: [{ id: product5.id, quantity: 1 }] })
+      );
+      await orderModel.create(
+        user.id,
+        generate.order([], { products: [{ id: product6.id, quantity: 1 }] })
+      );
+      await orderModel.create(
+        user.id,
+        generate.order([], { products: [{ id: product7.id, quantity: 1 }] })
+      );
 
       const topProducts = await productModel.showTopFive();
 
@@ -182,7 +192,7 @@ describe("Product Model", () => {
       expect(topProducts[2].id).toEqual(product2.id);
       expect(topProducts[3].id).toEqual(product4.id);
 
-      await query("DELETE FROM orders *");
+      await clearDB();
     });
   });
 

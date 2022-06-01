@@ -15,7 +15,7 @@ import type {
   UnconfirmedID,
   UpdateProduct,
   DeleteResponse,
-  ProductWQuantity,
+  OrderProduct,
 } from "../@types";
 
 export class ProductModel {
@@ -45,13 +45,13 @@ export class ProductModel {
   }
 
   async showTopFive() {
-    const { rows: products } = await query<ProductWQuantity>(
+    const { rows: products } = await query<OrderProduct>(
       `
         SELECT
           products.*,
-          SUM(orders.quantity)::INTEGER AS quantity
-        FROM orders
-        JOIN products ON orders.product_id = products.id
+          SUM(order_products.quantity)::INTEGER AS quantity
+        FROM order_products
+        JOIN products ON order_products.product_id = products.id
         GROUP BY products.id
         ORDER BY quantity DESC
         LIMIT 5
