@@ -102,7 +102,7 @@
   `GET /products/top-five`
 
   - Requires noting.
-  - Returns an array of maximum length of 5 of [ProductWQuantity](#product-shape) object.
+  - Returns an array of maximum length of 5 of [OrderProduct](#order-shape) objects.
 
 - #### **Update**
 
@@ -152,19 +152,10 @@
 
   `POST /orders`
 
-  - Requires
-    - `product_id: number` the product id.
-    - `u_id: number` the user id.
-    - `quantity: number`
+  - Requires a _token_. And for the body
+    - `products: { id: number, quantity: number }[]` an array for the order products' ids with their required quantities.
     - `state: OrderState` [OrderState](#order-shape) is "active" or "complete".
   - Returns the created order as [PopulatedOrder](#order-shape) object.
-
-- #### **Update**
-
-  `PUT /orders/:id`
-
-  - Requires the product `id` as a `number` as a parameter. The fields you want to update which could be property from the product except the id.
-  - Returns updated order as [PopulatedOrder](#order-shape) object.
 
 - #### **Delete**
 
@@ -212,10 +203,6 @@ interface Product {
   price: number;
   category: string;
 }
-
-interface ProductWQuantity extends Product {
-  quantity: number;
-}
 ```
 
 ### <a name="order-shape"></a>Order
@@ -226,24 +213,20 @@ enum OrderState {
   COMPLETE = "complete",
 }
 
-interface Order {
-  id: number;
-  product_id: number; // Foreign key to products table.
-  u_id: number; // Foreign key to users table.
+interface OrderProduct extends Product {
   quantity: number;
-  state: OrderState;
 }
 
 interface PopulatedOrder {
   id: number;
-  product: string;
-  product_price: number;
-  product_category: string;
+  state: OrderState;
+
+  u_id: number;
   u_firstname: string;
   u_lastname: string;
   u_username: string;
-  quantity: number;
-  state: OrderState;
+
+  products: OrderProduct[];
 }
 ```
 
