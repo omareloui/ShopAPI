@@ -1,5 +1,5 @@
 import { ProductModel } from "..";
-import { getError, query } from "../../utils";
+import { getError } from "../../utils";
 
 import type { Product } from "../../@types";
 import { clearDB, generate } from "../../__tests__/utils";
