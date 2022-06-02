@@ -179,9 +179,14 @@ describe("Order Handler", () => {
       const res = await request.get("/orders/mine").set({ Authorization: jwt });
       const orders = res.body as PopulatedOrder[];
       expect(orders.length).toEqual(4);
-      const sortOrders = (a: PopulatedOrder, b: PopulatedOrder) => a.id - b.id;
-      expect(orders.sort(sortOrders)).toEqual(
-        [order1, order2, order3, order4].sort(sortOrders)
+
+      const sortOrders = (order: PopulatedOrder[]) =>
+        order
+          .sort((a, b) => a.id - b.id)
+          .map(o => o.products.sort((a, b) => a.id - b.id));
+
+      expect(sortOrders(orders)).toEqual(
+        sortOrders([order1, order2, order3, order4])
       );
     });
 
@@ -203,15 +208,18 @@ describe("Order Handler", () => {
         .post("/orders")
         .set({ Authorization: jwt })
         .send(generateOrder({ state: OrderState.ACTIVE }));
+
       const res = await request
         .get(`/orders/mine/complete`)
         .set({ Authorization: jwt });
       const orders = res.body as PopulatedOrder[];
-      const sortOrders = (a: PopulatedOrder, b: PopulatedOrder) => a.id - b.id;
+
+      const sortOrders = (order: PopulatedOrder[]) =>
+        order
+          .sort((a, b) => a.id - b.id)
+          .map(o => o.products.sort((a, b) => a.id - b.id));
       expect(orders.length).toEqual(2);
-      expect(orders.sort(sortOrders)).toEqual(
-        [order1, order3].sort(sortOrders)
-      );
+      expect(sortOrders(orders)).toEqual(sortOrders([order1, order3]));
     });
 
     it("should delete the order on DELETE /orders/:id", async () => {

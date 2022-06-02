@@ -278,14 +278,13 @@ describe("Order Model", () => {
       expect(user2Orders.length).toEqual(2);
       expect(user3Orders.length).toEqual(1);
 
-      const sortOrders = (a: PopulatedOrder, b: PopulatedOrder) => a.id - b.id;
+      const sortOrders = (order: PopulatedOrder[]) =>
+        order
+          .sort((a, b) => a.id - b.id)
+          .map(o => o.products.sort((a, b) => a.id - b.id));
 
-      expect(user1Orders.sort(sortOrders)).toEqual(
-        [order1, order2].sort(sortOrders)
-      );
-      expect(user2Orders.sort(sortOrders)).toEqual(
-        [order3, order5].sort(sortOrders)
-      );
+      expect(sortOrders(user1Orders)).toEqual(sortOrders([order1, order2]));
+      expect(sortOrders(user2Orders)).toEqual(sortOrders([order3, order5]));
       expect(user3Orders).toEqual([order4]);
     });
   });
